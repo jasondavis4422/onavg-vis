@@ -51,12 +51,14 @@
     #table-container table {
       border-collapse: collapse;
     }
-    #table-container th, #table-container td {
+    #table-container th,
+    #table-container td {
       border: 0.5px solid white;
       padding: 4px;
       text-align: center;
     }
-    #table-container td:nth-child(2), #table-container td:nth-child(3) {
+    #table-container td:nth-child(2),
+    #table-container td:nth-child(3) {
       text-align: left;
     }
     #info-container {
@@ -68,7 +70,8 @@
       border-radius: 5px;
       font-size: 14px;
     }
-    #vertex-info, #file-name {
+    #vertex-info,
+    #file-name {
       margin: 0;
       padding: 0;
     }
@@ -81,7 +84,7 @@
     }
     #homepage-button button {
       padding: 8px 12px;
-      background-color: #4682B4;
+      background-color: #4682b4;
       color: white;
       border: none;
       border-radius: 4px;
@@ -95,9 +98,7 @@
 
   <!-- Button to return to homepage -->
   <div id="homepage-button">
-    <a href="instructions.html">
-      <button>Instructions</button>
-    </a>
+    <a href="instructions.html"><button>Instructions</button></a>
   </div>
 
   <div id="upload-container">
@@ -125,7 +126,7 @@
 
     <div id="info-container">
       <p id="file-name"></p>
-      <p id="vertex-info">Hover over the image to see vertex information</p>
+      <p id="vertex-info">Hover over the image to see vertex information. Each vertex contains the relevant numerical and string-labeled parcel.</p>
     </div>
   </div>
 
@@ -137,74 +138,90 @@
         lookupTableIco32 = null,
         lookupTableIco64 = null,
         lookupTableIco128 = null,
-        // New FS128 parcellation data (assumed to be combined for both hemispheres)
+        // FS128 parcellation data (combined for both hemispheres)
         fs128_aparc = null,
         fs128_aparc_a2009s = null,
         fs128_aparc_DKTatlas = null,
+        destrieux_aparc = null,
+        dk_aparc = null,
+        dkt_aparc = null,
         originalWidth = 0,
         originalHeight = 0,
         scaleX = 1,
         scaleY = 1;
-  
+
     const image = $('#brain-image');
     const vertexInfo = $('#vertex-info');
     const fileNameInfo = $('#file-name');
-  
-    // Display the file name from the image source
+
+    // Show file name from the current image source
     function displayFileName() {
       const fileName = image.attr('src').split('/').pop();
       fileNameInfo.text(`File: ${fileName}`);
     }
-  
-    // Load JSON files using jQuery's getJSON (client-side only)
+
+    // Load all JSON files
     function loadData() {
       $.when(
-        $.getJSON("_static/mapping_data_ico128.json", function(data) {
+        $.getJSON('_static/mapping_data_ico128.json', data => {
           mappingData = data;
           originalHeight = mappingData.length;
           originalWidth = mappingData[0].length;
           console.log(`Mapping data loaded: (${originalWidth} x ${originalHeight})`);
         }),
-        $.getJSON("_static/lookup_table_ico8.json", function(data) {
+        $.getJSON('_static/lookup_table_ico8.json', data => {
           lookupTableIco8 = data;
-          console.log("Lookup table ico8 loaded");
+          console.log('Lookup table ico8 loaded');
         }),
-        $.getJSON("_static/lookup_table_ico16.json", function(data) {
+        $.getJSON('_static/lookup_table_ico16.json', data => {
           lookupTableIco16 = data;
-          console.log("Lookup table ico16 loaded");
+          console.log('Lookup table ico16 loaded');
         }),
-        $.getJSON("_static/lookup_table_ico32.json", function(data) {
+        $.getJSON('_static/lookup_table_ico32.json', data => {
           lookupTableIco32 = data;
-          console.log("Lookup table ico32 loaded");
+          console.log('Lookup table ico32 loaded');
         }),
-        $.getJSON("_static/lookup_table_ico64.json", function(data) {
+        $.getJSON('_static/lookup_table_ico64.json', data => {
           lookupTableIco64 = data;
-          console.log("Lookup table ico64 loaded");
+          console.log('Lookup table ico64 loaded');
         }),
-        $.getJSON("_static/lookup_table_ico128.json", function(data) {
+        $.getJSON('_static/lookup_table_ico128.json', data => {
           lookupTableIco128 = data;
-          console.log("Lookup table ico128 loaded");
+          console.log('Lookup table ico128 loaded');
         }),
-        // Load FS128 parcellation JSON files (already combined for both hemispheres)
-        $.getJSON("_static/fs128_aparc.json", function(data) {
+        // FS128 parcellation JSON files
+        $.getJSON('_static/fs128_aparc.json', data => {
           fs128_aparc = data;
-          console.log("FS128 aparc loaded");
+          console.log('FS128 aparc loaded');
         }),
-        $.getJSON("_static/fs128_aparc.a2009s.json", function(data) {
+        $.getJSON('_static/fs128_aparc.a2009s.json', data => {
           fs128_aparc_a2009s = data;
-          console.log("FS128 aparc.a2009s loaded");
+          console.log('FS128 aparc.a2009s loaded');
         }),
-        $.getJSON("_static/fs128_aparc.DKTatlas.json", function(data) {
+        $.getJSON('_static/fs128_aparc.DKTatlas.json', data => {
           fs128_aparc_DKTatlas = data;
-          console.log("FS128 aparc.DKTatlas loaded");
+          console.log('FS128 aparc.DKTatlas loaded');
+        }),
+        // Anatomical label JSON files
+        $.getJSON('_static/destrieux_labels.json', data => {
+          destrieux_aparc = data;
+          console.log('Destrieux labels loaded');
+        }),
+        $.getJSON('_static/dk_labels.json', data => {
+          dk_aparc = data;
+          console.log('DK labels loaded');
+        }),
+        $.getJSON('_static/dkt_labels.json', data => {
+          dkt_aparc = data;
+          console.log('DKT labels loaded');
         })
-      ).done(function() {
-        console.log("All JSON files loaded successfully.");
-        updateDisplaySize();  // Update scale factors after loading dimensions
+      ).done(() => {
+        console.log('All JSON files loaded successfully.');
+        updateDisplaySize();   // compute scaling factors
       });
     }
-  
-    // Update scaling factors based on current image display size vs. original data size
+
+    // Compute scaling factors between displayed image size and original data size
     function updateDisplaySize() {
       const rect = image[0].getBoundingClientRect();
       const displayWidth = rect.width;
@@ -214,76 +231,87 @@
       console.log(`Display size: ${displayWidth} x ${displayHeight}`);
       console.log(`Scaling factors: scaleX=${scaleX}, scaleY=${scaleY}`);
     }
-  
-    // Given mouse coordinates in the scaled space, return the vertex index from mapping data
+
+    // Return vertex index from mapping data (or null if background)
     function getVertexFromMapping(mouseX, mouseY) {
-      if (mouseY >= 0 && mouseY < originalHeight && mouseX >= 0 && mouseX < originalWidth) {
+      if (
+        mouseY >= 0 && mouseY < originalHeight &&
+        mouseX >= 0 && mouseX < originalWidth
+      ) {
         const vertex = mappingData[mouseY][mouseX];
-        return (vertex !== -1) ? vertex : null;
+        return vertex !== -1 ? vertex : null;
       }
       return null;
     }
-  
-    // Handle image upload, update the displayed image and file name
-    $('#imageUpload').on('change', function(event) {
-      const file = event.target.files[0];
+
+    // Handle user‑uploaded image
+    $('#imageUpload').on('change', function (e) {
+      const file = e.target.files[0];
       if (file) {
         fileNameInfo.text(`File: ${file.name}`);
-        const imageUrl = URL.createObjectURL(file);
-        image.attr('src', imageUrl);
-        image.on('load', function() {
-          updateDisplaySize();
-        });
+        const url = URL.createObjectURL(file);
+        image.attr('src', url).on('load', updateDisplaySize);
       }
     });
-  
-    // When the document is ready, load JSON data and set up event handlers
-    $(document).ready(function() {
+
+    // Initialise everything when the page is ready
+    $(document).ready(() => {
       displayFileName();
       loadData();
-  
-      $(window).resize(function() {
-        updateDisplaySize();
-      });
-  
-      // Process mouse movement over the image
-      image.on('mousemove', function(event) {
+
+      $(window).on('resize', updateDisplaySize);
+
+      // Mouse move over the brain image
+      image.on('mousemove', function (e) {
         const rect = this.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-    
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
         if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-          const mouseXOriginal = Math.floor(x * scaleX);
-          const mouseYOriginal = Math.floor(y * scaleY);
-          console.log(`Mouse: (${x.toFixed(1)}, ${y.toFixed(1)}) -> Scaled: (${mouseXOriginal}, ${mouseYOriginal})`);
-          
-          const vertex = getVertexFromMapping(mouseXOriginal, mouseYOriginal);
-    
+          const mouseXOrig = Math.floor(x * scaleX);
+          const mouseYOrig = Math.floor(y * scaleY);
+          console.log(`Mouse: (${x.toFixed(1)}, ${y.toFixed(1)}) → Scaled: (${mouseXOrig}, ${mouseYOrig})`);
+
+          const vertex = getVertexFromMapping(mouseXOrig, mouseYOrig);
+
           if (vertex !== null) {
-            // ICO lookup table data
-            const ico8 = lookupTableIco8[vertex];
-            const ico16 = lookupTableIco16[vertex];
-            const ico32 = lookupTableIco32[vertex];
-            const ico64 = lookupTableIco64[vertex];
+            // ICO lookup values
+            const ico8   = lookupTableIco8[vertex];
+            const ico16  = lookupTableIco16[vertex];
+            const ico32  = lookupTableIco32[vertex];
+            const ico64  = lookupTableIco64[vertex];
             const ico128 = lookupTableIco128[vertex];
-            
-            // FS128 parcellation data (from the combined files)
-            const fs128_aparc_val = fs128_aparc ? fs128_aparc[vertex] : "N/A";
-            const fs128_aparc_a2009s_val = fs128_aparc_a2009s ? fs128_aparc_a2009s[vertex] : "N/A";
-            const fs128_aparc_DKTatlas_val = fs128_aparc_DKTatlas ? fs128_aparc_DKTatlas[vertex] : "N/A";
-            
-            vertexInfo.html(
-              `<br><strong>onavg coordinate:</strong><br>
-               ico8: ${ico8} <br>
-               ico16: ${ico16} <br>
-               ico32: ${ico32} <br>
-               ico64: ${ico64} <br>
-               ico128: ${ico128} <br><br>
-               <strong>fsavg parcellation (ico128):</strong><br>
-               aparc: ${fs128_aparc_val} <br>
-               aparc.a2009s: ${fs128_aparc_a2009s_val} <br>
-               aparc.DKTatlas: ${fs128_aparc_DKTatlas_val}`
-            );
+
+            // FS128 parcellation values
+            const fs128_aparc_val       = fs128_aparc       ? fs128_aparc[vertex]       : 'N/A';
+            const fs128_aparc_a2009s_val = fs128_aparc_a2009s ? fs128_aparc_a2009s[vertex] : 'N/A';
+            const fs128_aparc_DKTatlas_val = fs128_aparc_DKTatlas ? fs128_aparc_DKTatlas[vertex] : 'N/A';
+
+            // Anatomical labels
+            const destrieux = destrieux_aparc ? destrieux_aparc[vertex] : 'N/A';
+            const dk        = dk_aparc        ? dk_aparc[vertex]        : 'N/A';
+            const dkt       = dkt_aparc       ? dkt_aparc[vertex]       : 'N/A';
+
+            // Build and inject HTML
+            const html = `
+              <br><strong>onavg coordinate:</strong><br>
+              ico8: ${ico8}<br>
+              ico16: ${ico16}<br>
+              ico32: ${ico32}<br>
+              ico64: ${ico64}<br>
+              ico128: ${ico128}<br><br>
+
+              <strong>fsavg parcellation (ico128):</strong><br>
+              aparc: ${fs128_aparc_val}<br>
+              aparc.a2009s: ${fs128_aparc_a2009s_val}<br>
+              aparc.DKTatlas: ${fs128_aparc_DKTatlas_val}<br><br>
+
+              <strong>onavg anatomical parcellation (ico128):</strong><br>
+              destrieux: ${destrieux}<br>
+              dk: ${dk}<br>
+              dkt: ${dkt}
+            `;
+            vertexInfo.html(html);
           } else {
             vertexInfo.text('No vertex selected');
           }
@@ -291,11 +319,12 @@
           vertexInfo.text('No vertex selected');
         }
       });
-    
-      image.on('mouseleave', function() {
+
+      // Clear info when mouse leaves the image
+      image.on('mouseleave', () => {
         vertexInfo.text('No vertex selected');
       });
     });
-  </script>  
+  </script>
 </body>
 </html>
