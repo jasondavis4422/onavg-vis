@@ -1,5 +1,6 @@
 This is a tool where you can upload a 2d brain image, hover your mouse on a particular location, and view its onavg vertex index in many resolutions (ico8, ico16, ico32, ico64, ico128). 
 It also provides the numerical and string-labeled location based on the following widely-used anatomical parcellations (Destrieux, DK, DKT). References provided below.
+This tool is adapted from Elizabeth Li's version located here: https://elizabeth-li-shuxuan.github.io/onavg-vis/
 
 Anatomical Atlases: 
 
