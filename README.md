@@ -4,8 +4,8 @@ This tool is adapted from Elizabeth Li's version located here: https://elizabeth
 
 Anatomical Atlases: 
 
-Desikan-Killany Atlas (2006): 
-Name: fs128_aparc.json
+Desikan-Killany Atlas (2006): <br>
+Name: fs128_aparc.json <br>
 Reference: Desikan, R. S., Ségonne, F., Fischl, B., Quinn, B. T., Dickerson, B. C., Blacker, D., Buckner, R. L., Dale, A. M., Maguire, R. P., Hyman, B. T., Albert, M. S., & Killiany, R. J. (2006). An automated labeling system for subdividing the human cerebral cortex on MRI scans into gyral based regions of interest. NeuroImage, 31(3), 968–980. https://doi.org/10.1016/j.neuroimage.2006.01.021
 
 Destrieux Atlas (2009):
