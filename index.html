@@ -144,7 +144,6 @@
         lookupTableIco128 = null,
         dataMatrix = null,
         currentIcoSpace = null,
-        // FS128 parcellation data (combined for both hemispheres)
         fs128_aparc = null,
         fs128_aparc_a2009s = null,
         fs128_aparc_DKTatlas = null,
@@ -231,7 +230,6 @@
           lookupTableIco128 = data;
           console.log('Lookup table ico128 loaded');
         }),
-        // FS128 parcellation JSON files
         $.getJSON('_static/fs128_aparc.json', data => {
           fs128_aparc = data;
           console.log('FS128 aparc loaded');
@@ -244,7 +242,6 @@
           fs128_aparc_DKTatlas = data;
           console.log('FS128 aparc.DKTatlas loaded');
         }),
-        // Anatomical label JSON files
         $.getJSON('_static/destrieux_labels.json', data => {
           destrieux_aparc = data;
           console.log('Destrieux labels loaded');
@@ -259,7 +256,7 @@
         })
       ).done(() => {
         console.log('All JSON files loaded successfully.');
-        updateDisplaySize();   // compute scaling factors
+        updateDisplaySize();
       });
     }
 
@@ -304,7 +301,6 @@
         const reader = new FileReader();
         reader.onload = function(event) {
           try {
-            // Parse TXT file - expects one number per line
             const textContent = event.target.result;
             dataMatrix = textContent
               .split('\n')
@@ -380,6 +376,9 @@
                 console.log(`Retrieved data value from ${currentIcoSpace} space at index ${dataIndex}: ${dataValue}`);
               }
             }
+
+         
+
 // Build and inject HTML
             const html = `
               <br><strong>onavg coordinate:</strong><br>
