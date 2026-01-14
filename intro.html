@@ -139,6 +139,22 @@
   </div>
 
   <script>
+      const image = $('#brain-image');
+    const vertexInfo = $('#vertex-info');
+    const fileNameInfo = $('#file-name');
+    const dataInfo = $('#data-info');
+
+    // Show file name from the current image source
+    function displayFileName() {
+      const fileName = image.attr('src').split('/').pop();
+      fileNameInfo.text(`File: ${fileName}`);
+    }
+
+        // Show file name from the current image source
+    function displayDataName() {
+      const dataName = image.attr('src').split('/').pop();
+      dataInfo.text(`Data Matrix: ${dataName}`);
+    }
     // Global variables for mapping and lookup data
 let mappingData = null,
     lookupTableIco8 = null,
