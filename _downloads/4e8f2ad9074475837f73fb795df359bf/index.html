@@ -26,6 +26,7 @@
         padding: 10px;
         border-radius: 5px;
         font-size: 14px;
+        z-index: 50;
       }
       #main-content {
         display: flex;
@@ -40,13 +41,16 @@
         object-fit: contain;
       }
       #table-container {
-        position: absolute;
-        top: 50%;
-        left: 0;
-        transform: translateY(-50%);
+        position: fixed;
+        bottom: 150px;
+        left: 10px;
         font-size: 12px;
         width: auto;
         padding-left: 10px;
+        background-color: rgba(0, 0, 0, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 40;
       }
       #table-container table {
         border-collapse: collapse;
@@ -69,6 +73,9 @@
         padding: 10px;
         border-radius: 5px;
         font-size: 14px;
+        max-height: 80vh;
+        overflow-y: auto;
+        z-index: 60;
       }
       #vertex-info,
       #file-name {
@@ -161,244 +168,248 @@
     </div>
 
     <script>
-          // Global variables for mapping and lookup data
-          let mappingData = null,
-              lookupTableIco8 = null,
-              lookupTableIco16 = null,
-              lookupTableIco32 = null,
-              lookupTableIco64 = null,
-              lookupTableIco128 = null,
-              dataMatrix = null,
-              currentIcoSpace = null,
-              fs128_aparc = null,
-              fs128_aparc_a2009s = null,
-              fs128_aparc_DKTatlas = null,
-              destrieux_aparc = null,
-              dk_aparc = null,
-              dkt_aparc = null,
-              originalWidth = 0,
-              originalHeight = 0,
-              scaleX = 1,
-              scaleY = 1;
+      // Global variables for mapping and lookup data
+      let mappingData = null,
+          lookupTableIco8 = null,
+          lookupTableIco16 = null,
+          lookupTableIco32 = null,
+          lookupTableIco64 = null,
+          lookupTableIco128 = null,
+          dataMatrix = null,
+          currentIcoSpace = null,
+          fs128_aparc = null,
+          fs128_aparc_a2009s = null,
+          fs128_aparc_DKTatlas = null,
+          destrieux_aparc = null,
+          dk_aparc = null,
+          dkt_aparc = null,
+          originalWidth = 0,
+          originalHeight = 0,
+          scaleX = 1,
+          scaleY = 1;
 
-          const image = $('#brain-image');
-          const vertexInfo = $('#vertex-info');
-          const fileNameInfo = $('#file-name');
+      const image = $('#brain-image');
+      const vertexInfo = $('#vertex-info');
+      const fileNameInfo = $('#file-name');
 
-          // Determine ico space from data matrix length
-          function determineIcoSpace(dataLength) {
-            switch(dataLength) {
-              case 1210:
-                return 'ico8';
-              case 4831:
-                return 'ico16';
-              case 19341:
-                return 'ico32';
-              case 77326:
-                return 'ico64';
-              case 309346:
-                return 'ico128';
-              default:
-                return null;
-            }
-          }
-
-          // Get the appropriate lookup table based on ico space
-          function getLookupTable(icoSpace) {
-            switch(icoSpace) {
-              case 'ico8':
-                return lookupTableIco8;
-              case 'ico16':
-                return lookupTableIco16;
-              case 'ico32':
-                return lookupTableIco32;
-              case 'ico64':
-                return lookupTableIco64;
-              case 'ico128':
-                return lookupTableIco128;
-              default:
-                return null;
-            }
-          }
-
-          // Show file name from the current image source
-          function displayFileName() {
-            const fileName = image.attr('src').split('/').pop();
-            fileNameInfo.text(`File: ${fileName}`);
-          }
-
-          // Load all JSON files
-          function loadData() {
-            $.when(
-              $.getJSON('_static/mapping_data_ico128.json', data => {
-                mappingData = data;
-                originalHeight = mappingData.length;
-                originalWidth = mappingData[0].length;
-                console.log(`Mapping data loaded: (${originalWidth} x ${originalHeight})`);
-              }),
-              $.getJSON('_static/lookup_table_ico8.json', data => {
-                lookupTableIco8 = data;
-                console.log('Lookup table ico8 loaded');
-              }),
-              $.getJSON('_static/lookup_table_ico16.json', data => {
-                lookupTableIco16 = data;
-                console.log('Lookup table ico16 loaded');
-              }),
-              $.getJSON('_static/lookup_table_ico32.json', data => {
-                lookupTableIco32 = data;
-                console.log('Lookup table ico32 loaded');
-              }),
-              $.getJSON('_static/lookup_table_ico64.json', data => {
-                lookupTableIco64 = data;
-                console.log('Lookup table ico64 loaded');
-              }),
-              $.getJSON('_static/lookup_table_ico128.json', data => {
-                lookupTableIco128 = data;
-                console.log('Lookup table ico128 loaded');
-              }),
-              $.getJSON('_static/fs128_aparc.json', data => {
-                fs128_aparc = data;
-                console.log('FS128 aparc loaded');
-              }),
-              $.getJSON('_static/fs128_aparc.a2009s.json', data => {
-                fs128_aparc_a2009s = data;
-                console.log('FS128 aparc.a2009s loaded');
-              }),
-              $.getJSON('_static/fs128_aparc.DKTatlas.json', data => {
-                fs128_aparc_DKTatlas = data;
-                console.log('FS128 aparc.DKTatlas loaded');
-              }),
-              $.getJSON('_static/destrieux_labels.json', data => {
-                destrieux_aparc = data;
-                console.log('Destrieux labels loaded');
-              }),
-              $.getJSON('_static/dk_labels.json', data => {
-                dk_aparc = data;
-                console.log('DK labels loaded');
-              }),
-              $.getJSON('_static/dkt_labels.json', data => {
-                dkt_aparc = data;
-                console.log('DKT labels loaded');
-              })
-            ).done(() => {
-              console.log('All JSON files loaded successfully.');
-              updateDisplaySize();
-            });
-          }
-
-          // Compute scaling factors between displayed image size and original data size
-          function updateDisplaySize() {
-            const rect = image[0].getBoundingClientRect();
-            const displayWidth = rect.width;
-            const displayHeight = rect.height;
-            scaleX = originalWidth / displayWidth;
-            scaleY = originalHeight / displayHeight;
-            console.log(`Display size: ${displayWidth} x ${displayHeight}`);
-            console.log(`Scaling factors: scaleX=${scaleX}, scaleY=${scaleY}`);
-          }
-
-          // Return vertex index from mapping data (or null if background)
-          function getVertexFromMapping(mouseX, mouseY) {
-            if (
-              mouseY >= 0 && mouseY < originalHeight &&
-              mouseX >= 0 && mouseX < originalWidth
-            ) {
-              const vertex = mappingData[mouseY][mouseX];
-              return vertex !== -1 ? vertex : null;
-            }
+      // Determine ico space from data matrix length
+      function determineIcoSpace(dataLength) {
+        switch(dataLength) {
+          case 1210:
+            return 'ico8';
+          case 4831:
+            return 'ico16';
+          case 19341:
+            return 'ico32';
+          case 77326:
+            return 'ico64';
+          case 309346:
+            return 'ico128';
+          default:
             return null;
-          }
+        }
+      }
 
-          // Handle user-uploaded image
-          $('#imageUpload').on('change', function (e) {
-            const file = e.target.files[0];
-            if (file) {
-              fileNameInfo.text(`File: ${file.name}`);
-              const url = URL.createObjectURL(file);
-              image.attr('src', url).on('load', updateDisplaySize);
+      // Get the appropriate lookup table based on ico space
+      function getLookupTable(icoSpace) {
+        switch(icoSpace) {
+          case 'ico8':
+            return lookupTableIco8;
+          case 'ico16':
+            return lookupTableIco16;
+          case 'ico32':
+            return lookupTableIco32;
+          case 'ico64':
+            return lookupTableIco64;
+          case 'ico128':
+            return lookupTableIco128;
+          default:
+            return null;
+        }
+      }
+
+      // Show file name from the current image source
+      function displayFileName() {
+        const fileName = image.attr('src').split('/').pop();
+        fileNameInfo.text(`File: ${fileName}`);
+      }
+
+      // Load all JSON files
+      function loadData() {
+        $.when(
+          $.getJSON('_static/mapping_data_ico128.json', data => {
+            mappingData = data;
+            originalHeight = mappingData.length;
+            originalWidth = mappingData[0].length;
+            console.log(`Mapping data loaded: (${originalWidth} x ${originalHeight})`);
+          }),
+          $.getJSON('_static/lookup_table_ico8.json', data => {
+            lookupTableIco8 = data;
+            console.log('Lookup table ico8 loaded');
+          }),
+          $.getJSON('_static/lookup_table_ico16.json', data => {
+            lookupTableIco16 = data;
+            console.log('Lookup table ico16 loaded');
+          }),
+          $.getJSON('_static/lookup_table_ico32.json', data => {
+            lookupTableIco32 = data;
+            console.log('Lookup table ico32 loaded');
+          }),
+          $.getJSON('_static/lookup_table_ico64.json', data => {
+            lookupTableIco64 = data;
+            console.log('Lookup table ico64 loaded');
+          }),
+          $.getJSON('_static/lookup_table_ico128.json', data => {
+            lookupTableIco128 = data;
+            console.log('Lookup table ico128 loaded');
+          }),
+          $.getJSON('_static/fs128_aparc.json', data => {
+            fs128_aparc = data;
+            console.log('FS128 aparc loaded');
+          }),
+          $.getJSON('_static/fs128_aparc.a2009s.json', data => {
+            fs128_aparc_a2009s = data;
+            console.log('FS128 aparc.a2009s loaded');
+          }),
+          $.getJSON('_static/fs128_aparc.DKTatlas.json', data => {
+            fs128_aparc_DKTatlas = data;
+            console.log('FS128 aparc.DKTatlas loaded');
+          }),
+          $.getJSON('_static/destrieux_labels.json', data => {
+            destrieux_aparc = data;
+            console.log('Destrieux labels loaded');
+          }),
+          $.getJSON('_static/dk_labels.json', data => {
+            dk_aparc = data;
+            console.log('DK labels loaded');
+          }),
+          $.getJSON('_static/dkt_labels.json', data => {
+            dkt_aparc = data;
+            console.log('DKT labels loaded');
+          })
+        ).done(() => {
+          console.log('All JSON files loaded successfully.');
+          updateDisplaySize();
+        });
+      }
+
+      // Compute scaling factors between displayed image size and original data size
+      function updateDisplaySize() {
+        const rect = image[0].getBoundingClientRect();
+        const displayWidth = rect.width;
+        const displayHeight = rect.height;
+        scaleX = originalWidth / displayWidth;
+        scaleY = originalHeight / displayHeight;
+        console.log(`Display size: ${displayWidth} x ${displayHeight}`);
+        console.log(`Scaling factors: scaleX=${scaleX}, scaleY=${scaleY}`);
+      }
+
+      // Return vertex index from mapping data (or null if background)
+      function getVertexFromMapping(mouseX, mouseY) {
+        if (
+          mouseY >= 0 && mouseY < originalHeight &&
+          mouseX >= 0 && mouseX < originalWidth
+        ) {
+          const vertex = mappingData[mouseY][mouseX];
+          return vertex !== -1 ? vertex : null;
+        }
+        return null;
+      }
+
+      // Handle user-uploaded image
+      $('#imageUpload').on('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+          fileNameInfo.text(`File: ${file.name}`);
+          const url = URL.createObjectURL(file);
+          image.attr('src', url).on('load', updateDisplaySize);
+        }
+      });
+
+      // Handle user-uploaded data matrix
+      $('#dataUpload').on('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+          fileNameInfo.text(`Data Matrix File: ${file.name}`);
+          console.log(`Loading data matrix from file: ${file.name}`);
+
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            try {
+              const textContent = event.target.result;
+              
+              // Parse comma-separated values (handles both single and multi-line formats)
+              dataMatrix = textContent
+                .replace(/\n/g, '') // Remove newlines
+                .replace(/[\[\]]/g, '') // Remove brackets
+                .split(',')
+                .map(value => value.trim())
+                .filter(value => value.length > 0)
+                .map(value => parseFloat(value));
+
+              console.log('Data matrix loaded:', dataMatrix);
+
+              const dataLength = dataMatrix.length;
+              console.log(`Data matrix loaded with length: ${dataLength}`);
+              
+              currentIcoSpace = determineIcoSpace(dataLength);
+
+              if (currentIcoSpace) {
+                console.log(`Data matrix loaded in ${currentIcoSpace.toUpperCase()} space with ${dataLength} vertices`);
+              } else {
+                console.error(`Invalid data matrix length: ${dataLength}. Expected: 1210, 4831, 19341, 77326, or 309346`);
+                dataMatrix = null;
+                currentIcoSpace = null;
+              }
+            } catch (error) {
+              console.error('Error parsing TXT file:', error);
+              dataMatrix = null;
+              currentIcoSpace = null;
             }
-          });
+          };
+          reader.readAsText(file);
+        }
+      });
 
-          // Handle user-uploaded data matrix
-          $('#dataUpload').on('change', function (e) {
-            const file = e.target.files[0];
-            if (file) {
-              fileNameInfo.text(`Data Matrix File: ${file.name}`);
-              console.log(`Loading data matrix from file: ${file.name}`);
+      // Initialise everything when the page is ready
+      $(document).ready(() => {
+        displayFileName();
+        loadData();
 
-              const reader = new FileReader();
-              reader.onload = function(event) {
-                try {
-                  const textContent = event.target.result;
-                  dataMatrix = textContent
-                    .split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0)
-                    .map(line => parseFloat(line));
+        $(window).on('resize', updateDisplaySize);
 
-                  console.log(dataMatrix);
+        // Mouse move over the brain image
+        image.on('mousemove', function (e) {
+          const rect = this.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
 
-                  const dataLength = dataMatrix.length;
+          if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+            const mouseXOrig = Math.floor(x * scaleX);
+            const mouseYOrig = Math.floor(y * scaleY);
+            console.log(`Mouse: (${x.toFixed(1)}, ${y.toFixed(1)}) → Scaled: (${mouseXOrig}, ${mouseYOrig})`);
 
-                  console.log(`Data matrix loaded with length: ${dataLength}`);
-                  currentIcoSpace = determineIcoSpace(dataLength);
+            const vertex = getVertexFromMapping(mouseXOrig, mouseYOrig);
 
-                  if (currentIcoSpace) {
-                    console.log(`Data matrix loaded in ${currentIcoSpace.toUpperCase()} space with ${dataLength} vertices`);
-                  } else {
-                    console.error(`Invalid data matrix length: ${dataLength}. Expected: 1210, 4831, 19341, 77326, or 309346`);
-                    dataMatrix = null;
-                    currentIcoSpace = null;
-                  }
-                } catch (error) {
-                  console.error('Error parsing TXT file:', error);
-                  dataMatrix = null;
-                  currentIcoSpace = null;
-                }
-              };
-              reader.readAsText(file);
-            }
-          });
+            if (vertex !== null) {
+              // ICO lookup values
+              const ico8   = lookupTableIco8[vertex];
+              const ico16  = lookupTableIco16[vertex];
+              const ico32  = lookupTableIco32[vertex];
+              const ico64  = lookupTableIco64[vertex];
+              const ico128 = lookupTableIco128[vertex];
 
-          // Initialise everything when the page is ready
-          $(document).ready(() => {
-            displayFileName();
-            loadData();
+              // FS128 parcellation values
+              const fs128_aparc_val       = fs128_aparc       ? fs128_aparc[vertex]       : 'N/A';
+              const fs128_aparc_a2009s_val = fs128_aparc_a2009s ? fs128_aparc_a2009s[vertex] : 'N/A';
+              const fs128_aparc_DKTatlas_val = fs128_aparc_DKTatlas ? fs128_aparc_DKTatlas[vertex] : 'N/A';
 
-            $(window).on('resize', updateDisplaySize);
+              // Anatomical labels
+              const destrieux = destrieux_aparc ? destrieux_aparc[vertex] : 'N/A';
+              const dk        = dk_aparc        ? dk_aparc[vertex]        : 'N/A';
+              const dkt       = dkt_aparc       ? dkt_aparc[vertex]       : 'N/A';
 
-            // Mouse move over the brain image
-            image.on('mousemove', function (e) {
-              const rect = this.getBoundingClientRect();
-              const x = e.clientX - rect.left;
-              const y = e.clientY - rect.top;
-
-              if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-                const mouseXOrig = Math.floor(x * scaleX);
-                const mouseYOrig = Math.floor(y * scaleY);
-                console.log(`Mouse: (${x.toFixed(1)}, ${y.toFixed(1)}) → Scaled: (${mouseXOrig}, ${mouseYOrig})`);
-
-                const vertex = getVertexFromMapping(mouseXOrig, mouseYOrig);
-
-                if (vertex !== null) {
-                  // ICO lookup values
-                  const ico8   = lookupTableIco8[vertex];
-                  const ico16  = lookupTableIco16[vertex];
-                  const ico32  = lookupTableIco32[vertex];
-                  const ico64  = lookupTableIco64[vertex];
-                  const ico128 = lookupTableIco128[vertex];
-
-                  // FS128 parcellation values
-                  const fs128_aparc_val       = fs128_aparc       ? fs128_aparc[vertex]       : 'N/A';
-                  const fs128_aparc_a2009s_val = fs128_aparc_a2009s ? fs128_aparc_a2009s[vertex] : 'N/A';
-                  const fs128_aparc_DKTatlas_val = fs128_aparc_DKTatlas ? fs128_aparc_DKTatlas[vertex] : 'N/A';
-
-                  // Anatomical labels
-                  const destrieux = destrieux_aparc ? destrieux_aparc[vertex] : 'N/A';
-                  const dk        = dk_aparc        ? dk_aparc[vertex]        : 'N/A';
-                  const dkt       = dkt_aparc       ? dkt_aparc[vertex]       : 'N/A';
-
-                  // Get data value based on current ico space
+              // Get data value based on current ico space
                   let dataValue = 'N/A';
                   if (dataMatrix && currentIcoSpace) {
                     const lookupTable = getLookupTable(currentIcoSpace);
