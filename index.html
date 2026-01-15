@@ -177,9 +177,9 @@
           lookupTableIco128 = null,
           dataMatrix = null,
           currentIcoSpace = null,
-          fs128_aparc = null,
-          fs128_aparc_a2009s = null,
-          fs128_aparc_DKTatlas = null,
+          ds128_aparc = null,
+          ds128_aparc_a2009s = null,
+          ds128_aparc_DKTatlas = null,
           destrieux_aparc = null,
           dk_aparc = null,
           dkt_aparc = null,
@@ -399,10 +399,10 @@
               const ico64  = lookupTableIco64[vertex];
               const ico128 = lookupTableIco128[vertex];
 
-              // FS128 parcellation values
-              const fs128_aparc_val       = fs128_aparc       ? fs128_aparc[vertex]       : 'N/A';
-              const fs128_aparc_a2009s_val = fs128_aparc_a2009s ? fs128_aparc_a2009s[vertex] : 'N/A';
-              const fs128_aparc_DKTatlas_val = fs128_aparc_DKTatlas ? fs128_aparc_DKTatlas[vertex] : 'N/A';
+              // DS128 parcellation values
+              const ds128_aparc_val       = ds128_aparc       ? ds128_aparc[vertex]       : 'N/A';
+              const ds128_aparc_a2009s_val = ds128_aparc_a2009s ? ds128_aparc_a2009s[vertex] : 'N/A';
+              const ds128_aparc_DKTatlas_val = ds128_aparc_DKTatlas ? ds128_aparc_DKTatlas[vertex] : 'N/A';
 
               // Anatomical labels
               const destrieux = destrieux_aparc ? destrieux_aparc[vertex] : 'N/A';
@@ -430,17 +430,17 @@
                     ico64: ${ico64}<br>
                     ico128: ${ico128}<br><br>
 
-                    <strong>fsavg parcellation (ico128):</strong><br>
-                    aparc: ${fs128_aparc_val}<br>
-                    aparc.a2009s: ${fs128_aparc_a2009s_val}<br>
-                    aparc.DKTatlas: ${fs128_aparc_DKTatlas_val}<br><br>
+                    <strong>ds128 parcellation (ico128):</strong><br>
+                    aparc: ${ds128_aparc_val}<br>
+                    aparc.a2009s: ${ds128_aparc_a2009s_val}<br>
+                    aparc.DKTatlas: ${ds128_aparc_DKTatlas_val}<br><br>
 
                     <strong>onavg anatomical parcellation (ico128):</strong><br>
                     destrieux: ${destrieux}<br>
                     dk: ${dk}<br>
                     dkt: ${dkt} <br>
 
-                    <br><strong>Data Matrix Value:</strong><br>
+                    <br><strong>Data Matrix Value in ${currentIcoSpace} space:</strong><br>
                      value: ${dataValue}<br><br>
 
                   `;

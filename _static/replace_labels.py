@@ -5,9 +5,9 @@ import numpy as np
 # -------------------------------------------------
 # Paths (unchanged)
 script_dir = os.path.dirname(os.path.abspath(__file__))
-destrieux_file_path = os.path.join(script_dir, 'fs128_aparc.a2009s.json')
-dk_file_path        = os.path.join(script_dir, 'fs128_aparc.json')
-dkt_file_path       = os.path.join(script_dir, 'fs128_aparc.DKTatlas.json')
+destrieux_file_path = os.path.join(script_dir, 'ds128_aparc.a2009s.json')
+dk_file_path        = os.path.join(script_dir, 'ds128_aparc.json')
+dkt_file_path       = os.path.join(script_dir, 'ds128_aparc.DKTatlas.json')
 
 # -------------------------------------------------
 # Load the JSON files as Python lists (list of ints)
