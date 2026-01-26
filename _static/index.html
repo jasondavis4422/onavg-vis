@@ -98,6 +98,35 @@
         cursor: pointer;
         font-size: 14px;
       }
+      /* NEW: panel placed at the top‑right corner (same as monkey version) */
+      #search-panel {
+        position: fixed;
+        top: 10px;
+        right: 120px;               /* space from the “Instructions” button */
+        background-color: rgba(0,0,0,0.8);
+        padding: 8px;
+        border-radius: 5px;
+        font-size:14px;
+        z-index: 90;
+      }
+      #search-panel label,
+      #search-panel select,
+      #search-panel input,
+      #search-panel button {
+        margin-right: 6px;
+      }
+      /* NEW: green circle that marks the vertex */
+      .vertex-marker {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        background: rgba(0,255,0,0.6);
+        border: 2px solid #0f0;
+        border-radius: 50%;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        z-index: 120;     /* on top of everything else */
+      }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   </head>
@@ -105,6 +134,23 @@
     <!-- Button to return to homepage -->
     <div id="homepage-button">
       <a href="instructions.html"><button>Instructions</button></a>
+    </div>
+
+    <!-- ----- NEW: Search panel (exactly like the monkey version) ----- -->
+    <div id="search-panel">
+      <label for="ico-select">ICO space:</label>
+      <select id="ico-select">
+        <option value="ico8">ico8</option>
+        <option value="ico16">ico16</option>
+        <option value="ico32">ico32</option>
+        <option value="ico64">ico64</option>
+        <option value="ico128">ico128</option>
+      </select>
+
+      <label for="vertex-input">Vertex index:</label>
+      <input type="number" id="vertex-input" min="0" placeholder="e.g. 123" />
+
+      <button id="show-vertex-btn">Show</button>
     </div>
 
     <div id="upload-container">
@@ -162,13 +208,15 @@
         <p id="file-name"></p>
         <p id="vertex-info">
           Hover over the image to see vertex information. Each vertex contains
-          the relevant numerical and string-labeled parcel.
+          the relevant numerical and string‑labeled parcel.
         </p>
       </div>
     </div>
 
     <script>
-      // Global variables for mapping and lookup data
+      // -----------------------------------------------------------------
+      // GLOBAL VARIABLES – unchanged from the original human file
+      // -----------------------------------------------------------------
       let mappingData = null,
           lookupTableIco8 = null,
           lookupTableIco16 = null,
@@ -192,57 +240,64 @@
       const vertexInfo = $('#vertex-info');
       const fileNameInfo = $('#file-name');
 
-      // Determine ico space from data matrix length
+      // -----------------------------------------------------------------
+      // UTILITY FUNCTIONS (still exactly the same)
+      // -----------------------------------------------------------------
       function determineIcoSpace(dataLength) {
         switch(dataLength) {
-          case 1210:
-            return 'ico8';
-          case 4831:
-            return 'ico16';
-          case 19341:
-            return 'ico32';
-          case 77326:
-            return 'ico64';
-          case 309346:
-            return 'ico128';
-          default:
-            return null;
+          case 1210:   return 'ico8';
+          case 4831:   return 'ico16';
+          case 19341:  return 'ico32';
+          case 77326:  return 'ico64';
+          case 309346: return 'ico128';
+          default:     return null;
         }
       }
 
-      // Get the appropriate lookup table based on ico space
       function getLookupTable(icoSpace) {
         switch(icoSpace) {
-          case 'ico8':
-            return lookupTableIco8;
-          case 'ico16':
-            return lookupTableIco16;
-          case 'ico32':
-            return lookupTableIco32;
-          case 'ico64':
-            return lookupTableIco64;
-          case 'ico128':
-            return lookupTableIco128;
-          default:
-            return null;
+          case 'ico8':   return lookupTableIco8;
+          case 'ico16':  return lookupTableIco16;
+          case 'ico32':  return lookupTableIco32;
+          case 'ico64':  return lookupTableIco64;
+          case 'ico128': return lookupTableIco128;
+          default:       return null;
         }
       }
 
-      // Show file name from the current image source
       function displayFileName() {
         const fileName = image.attr('src').split('/').pop();
         fileNameInfo.text(`File: ${fileName}`);
       }
 
-      // Load all JSON files
+      function updateDisplaySize(){
+        const rect = image[0].getBoundingClientRect();
+        const displayWidth = rect.width;
+        const displayHeight = rect.height;
+        scaleX = originalWidth / displayWidth;
+        scaleY = originalHeight / displayHeight;
+        console.log(scaleX, scaleY);
+      }
+
+      function getVertexFromMapping(mx, my){
+        if (my>=0 && my<originalHeight && mx>=0 && mx<originalWidth){
+          const v = mappingData[my][mx];
+          return v!==-1 ? v : null;
+        }
+        return null;
+      }
+
+      // -----------------------------------------------------------------
+      // LOAD ALL JSON FILES (unchanged)
+      // -----------------------------------------------------------------
       function loadData() {
         $.when(
           $.getJSON('_static/mapping_data_ico128.json', data => {
             mappingData = data;
             originalHeight = mappingData.length;
-            console.log('Heifht:', originalHeight);
+            console.log("Height:", originalHeight);
             originalWidth = mappingData[0].length;
-            console.log('Width:', originalWidth);
+            console.log("Width:", originalWidth);
             console.log(`Mapping data loaded: (${originalWidth} x ${originalHeight})`);
           }),
           $.getJSON('_static/lookup_table_ico8.json', data => {
@@ -295,110 +350,181 @@
         });
       }
 
-      // Compute scaling factors between displayed image size and original data size
-      function updateDisplaySize() {
-        const rect = image[0].getBoundingClientRect();
-        const displayWidth = rect.width;
-        console.log(`Display width: ${displayWidth}`);
-        const displayHeight = rect.height;
-        console.log(`Display height: ${displayHeight}`);
-        scaleX = originalWidth / displayWidth;
-        scaleY = originalHeight / displayHeight;
-        console.log(`Display size: ${displayWidth} x ${displayHeight}`);
-        console.log(`Scaling factors: scaleX=${scaleX}, scaleY=${scaleY}`);
+      // -----------------------------------------------------------------
+      // NEW HELPERS – reverse lookup from vertex → (x,y) (same as monkey code)
+      // -----------------------------------------------------------------
+      /**
+       * Return every pixel that contains the requested vertex.
+       * The function returns an array of [x, y] pairs
+       *  /* --------------------------------------------------------------
+       NEW HELPERS – reverse lookup from vertex → (x,y)
+       -------------------------------------------------------------- */
+    /**
+     * Scan the mapping table for the first pixel that contains the requested
+     * vertex and return its original image coordinates.
+     * This is the only way to get pixel‑space coordinates because the
+     * mapping table stores **vertex → pixel** information.
+     */
+    /**
+ * Scan the whole mapping table and return every pixel that contains the
+ * requested vertex.  The function now returns an array of [x, y] pairs
+ * (or an empty array if the vertex is not present).
+ */
+    function getVertexCoordinates(icoSpace, vertex) {
+      const table = getLookupTable(icoSpace);
+      const index = table.indexOf(vertex);  
+      if (table.includes(vertex)) {
+        console.log(`The number ${vertex} is in the table data.`);
+      } else {
+        console.log(`The number ${vertex} is not found.`);
+      }  
+      if (index !== -1) {
+        console.log(`The location (index) of ${vertex} is: ${index}`);
+      } else {
+        console.log(`${vertex} was not found in the array.`);
+      }      // same as before
+
+      if (index === -1) return [];
+                        // vertex not in table
+
+      const coords = [];                            // ← collect every match
+      for (let y = 0; y < originalHeight; y++) {
+        const row = mappingData[y];
+        for (let x = 0; x < originalWidth; x++) {
+          if (row[x] === index) {
+            coords.push([x, y]);              // store original (full‑res) coords
+          }
+        }
+      }
+      return coords;                                // ← may contain many items
+    }
+
+    /**
+     * Validate that the entered vertex exists in the chosen ICO space.
+     * The lookup tables are arrays where the *index* is the vertex number.
+     */
+    function validateVertex(icoSpace, vertex) {
+        const table = getLookupTable(icoSpace);
+        if (table.includes(vertex)) {
+          console.log(`The number ${vertex} is in the table data.`);
+        } else {
+          console.log(`The number ${vertex} is not found.`);
+        }
+        index = table.indexOf(vertex)
+        console.log(table.indexOf(vertex))
+
+        if (index !== -1) {
+          console.log(`The location (index) of ${vertex} is: ${index}`);
+        } else {
+          console.log(`${vertex} was not found in the array.`);
+        }
+
+        return table && vertex >= 0 && table.includes(vertex);
       }
 
-      // Return vertex index from mapping data (or null if background)
-      function getVertexFromMapping(mouseX, mouseY) {
-        if (
-          mouseY >= 0 && mouseY < originalHeight &&
-          mouseX >= 0 && mouseX < originalWidth
-        ) {
-          const vertex = mappingData[mouseY][mouseX];
-          console.log(`Mapped vertex: ${vertex}`);
-          return vertex !== -1 ? vertex : null;
-        }
-        console.log('Mouse coordinates out of bounds');
-        return null;
+    function drawMarker(xScreen, yScreen){
+        const $m = $('<div class="vertex-marker"></div>');
+        const imgOffset = $image.offset();
+        $m.css({ left: imgOffset.left + xScreen,
+                top:  imgOffset.top  + yScreen });
+        $('body').append($m);
+    }
+
+    /* --------------------------------------------------------------
+       UI – file uploads
+       -------------------------------------------------------------- */
+    $('#imageUpload').on('change', e=>{
+      const file = e.target.files[0];
+      if (file){
+        $fileName.text(`File: ${file.name}`);
+        const url = URL.createObjectURL(file);
+        $image.attr('src',url).on('load', updateDisplaySize);
       }
+    });
 
-      // Handle user-uploaded image
-      $('#imageUpload').on('change', function (e) {
-        const file = e.target.files[0];
-        if (file) {
-          fileNameInfo.text(`File: ${file.name}`);
-          const url = URL.createObjectURL(file);
-          image.attr('src', url).on('load', updateDisplaySize);
-        }
-      });
-
-      // Handle user-uploaded data matrix
-      $('#dataUpload').on('change', function (e) {
-        const file = e.target.files[0];
-        if (file) {
-          fileNameInfo.text(`Data Matrix File: ${file.name}`);
-          console.log(`Loading data matrix from file: ${file.name}`);
-
-          const reader = new FileReader();
-          reader.onload = function(event) {
-            try {
-              const textContent = event.target.result;
-              
-              // Parse comma-separated values (handles both single and multi-line formats)
-              dataMatrix = textContent
-                .replace(/\n/g, '') // Remove newlines
-                .replace(/[\[\]]/g, '') // Remove brackets
-                .split(',')
-                .map(value => value.trim())
-                .filter(value => value.length > 0)
-                .map(value => parseFloat(value));
-
-              console.log('Data matrix loaded:', dataMatrix);
-
-              const dataLength = dataMatrix.length;
-              console.log(`Data matrix loaded with length: ${dataLength}`);
-              
-              currentIcoSpace = determineIcoSpace(dataLength);
-
-              if (currentIcoSpace) {
-                console.log(`Data matrix loaded in ${currentIcoSpace.toUpperCase()} space with ${dataLength} vertices`);
-              } else {
-                console.error(`Invalid data matrix length: ${dataLength}. Expected: 1210, 4831, 19341, 77326, or 309346`);
-                dataMatrix = null;
-                currentIcoSpace = null;
-              }
-            } catch (error) {
-              console.error('Error parsing TXT file:', error);
-              dataMatrix = null;
-              currentIcoSpace = null;
+    $('#dataUpload').on('change', e=>{
+      const file = e.target.files[0];
+      if (file){
+        $fileName.text(`Data Matrix File: ${file.name}`);
+        const reader = new FileReader();
+        reader.onload = ev=>{
+          try{
+            const txt = ev.target.result;
+            dataMatrix = txt.replace(/\n/g,'')
+                            .replace(/[\[\]]/g,'')
+                            .split(',')
+                            .map(v=>v.trim())
+                            .filter(v=>v.length>0)
+                            .map(v=>parseFloat(v));
+            const len = dataMatrix.length;
+            currentIcoSpace = determineIcoSpace(len);
+            if (!currentIcoSpace){
+              console.error('Unexpected data‑matrix length:',len);
             }
-          };
-          reader.readAsText(file);
-        }
-      });
+          }catch(err){
+            console.error('Error parsing TXT file:',err);
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
 
-      // Initialise everything when the page is ready
-      $(document).ready(() => {
-        displayFileName();
-        loadData();
+    /* --------------------------------------------------------------
+       UI – reverse‑lookup button
+       -------------------------------------------------------------- */
+   $('#show-vertex-btn').on('click', ()=>{
+    const ico   = $('#ico-select').val();
+    const vStr  = $('#vertex-input').val();
 
-        $(window).on('resize', updateDisplaySize);
+    // ---- basic validation -------------------------------------------------
+    if (vStr === '' || isNaN(vStr)){
+        alert('Please type a numeric vertex index.');
+        return;
+    }
+    const vertex = parseInt(vStr, 10);
+    if (!validateVertex(ico, vertex)){
+        alert(`Vertex ${vertex} is not valid for ${ico}.`);
+        return;
+    }
 
-        // Mouse move over the brain image
-        image.on('mousemove', function (e) {
-          const rect = this.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
+    // ---- find **all** original (x,y) positions in the mapping table --------
+    const allCoords = getVertexCoordinates(ico, vertex);
+    if (allCoords.length === 0){
+        alert(`Vertex ${vertex} does not appear in the mapping image.`);
+        return;
+    }
 
-          if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-            const mouseXOrig = Math.floor(x * scaleX);
-            const mouseYOrig = Math.floor(y * scaleY);
-            console.log(`Mouse: (${x.toFixed(1)}, ${y.toFixed(1)}) → Scaled: (${mouseXOrig}, ${mouseYOrig})`);
+    // ---- clear any previous markers ---------------------------------------
+    $('.vertex-marker').remove();
 
-            const vertex = getVertexFromMapping(mouseXOrig, mouseYOrig);
+    // ---- convert each to screen coordinates and draw a green dot ----------
+    allCoords.forEach(coord => {
+        const [origX, origY] = coord;
+        const screenX = Math.round(origX / scaleX);
+        const screenY = Math.round(origY / scaleY);
+        drawMarker(screenX, screenY);
+    });
+});
 
-            if (vertex !== null) {
-              // ICO lookup values
+    /* --------------------------------------------------------------
+       Existing hover‑info (unchanged – still useful)
+       -------------------------------------------------------------- */
+    $image.on('mousemove', e=>{
+      const rect = $image[0].getBoundingClientRect();
+      const x = e.clientX - rect.left,
+            y = e.clientY - rect.top;
+      if (x<0||y<0||x>rect.width||y>rect.height){ $vertexInfo.text('No vertex selected');return; }
+
+      const mx = Math.floor(x * scaleX),
+            my = Math.floor(y * scaleY);
+      const vertex = getVertexFromMapping(mx,my);
+
+      if (vertex===null){
+        $vertexInfo.text('No vertex selected');
+        return;
+      }
+
+      // ICO lookup values
               const ico8   = lookupTableIco8[vertex];
               const ico16  = lookupTableIco16[vertex];
               const ico32  = lookupTableIco32[vertex];
@@ -426,8 +552,7 @@
                       console.log(`Retrieved data value from ${currentIcoSpace} space at index ${dataIndex}: ${dataValue}`);
                     }
                   }
-
-      // Build and inject HTML
+    // Build and inject HTML
                   const html = `
                     <br><strong>onavg coordinate:</strong><br>
                     ico8: ${ico8}<br>
@@ -450,20 +575,19 @@
                      value: ${dataValue}<br><br>
 
                   `;
-                  vertexInfo.html(html);
-                } else {
-                  vertexInfo.text('No vertex selected');
-                }
-              } else {
-                vertexInfo.text('No vertex selected');
-              }
-            });
+      $vertexInfo.html(html);
+    });
 
-            // Clear info when mouse leaves the image
-            image.on('mouseleave', () => {
-              vertexInfo.text('No vertex selected');
-            });
-          });
-    </script>
-  </body>
+    $image.on('mouseleave',()=>{ $vertexInfo.text('No vertex selected'); });
+
+    /* --------------------------------------------------------------
+       Initialise everything
+       -------------------------------------------------------------- */
+    $(document).ready(()=>{
+      displayFileName();
+      loadData();
+      $(window).on('resize', updateDisplaySize);
+    });
+  </script>
+</body>
 </html>
