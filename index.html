@@ -355,63 +355,18 @@
       // -----------------------------------------------------------------
       /**
        * Return every pixel that contains the requested vertex.
-       * The function returns an array of [x, y] pairs
-       *  /* --------------------------------------------------------------
-       NEW HELPERS – reverse lookup from vertex → (x,y)
-       -------------------------------------------------------------- */
-    /**
-     * Scan the mapping table for the first pixel that contains the requested
-     * vertex and return its original image coordinates.
-     * This is the only way to get pixel‑space coordinates because the
-     * mapping table stores **vertex → pixel** information.
-     */
-    /**
- * Scan the whole mapping table and return every pixel that contains the
- * requested vertex.  The function now returns an array of [x, y] pairs
- * (or an empty array if the vertex is not present).
- */
-    function getVertexCoordinates(icoSpace, vertex) {
-      const table = getLookupTable(icoSpace);
-      const index = table.indexOf(vertex);  
-      if (table.includes(vertex)) {
-        console.log(`The number ${vertex} is in the table data.`);
-      } else {
-        console.log(`The number ${vertex} is not found.`);
-      }  
-      if (index !== -1) {
-        console.log(`The location (index) of ${vertex} is: ${index}`);
-      } else {
-        console.log(`${vertex} was not found in the array.`);
-      }      // same as before
-
-      if (index === -1) return [];
-                        // vertex not in table
-
-      const coords = [];                            // ← collect every match
-      for (let y = 0; y < originalHeight; y++) {
-        const row = mappingData[y];
-        for (let x = 0; x < originalWidth; x++) {
-          if (row[x] === index) {
-            coords.push([x, y]);              // store original (full‑res) coords
-          }
-        }
-      }
-      return coords;                                // ← may contain many items
-    }
-
-    /**
-     * Validate that the entered vertex exists in the chosen ICO space.
-     * The lookup tables are arrays where the *index* is the vertex number.
-     */
-    function validateVertex(icoSpace, vertex) {
+       * The function returns an array of [x, y] pairs (original image coordinates).
+       * If the vertex is not present, an empty array is returned.
+       */
+      function getVertexCoordinates(icoSpace, vertex){
         const table = getLookupTable(icoSpace);
+        const index = table.indexOf(vertex);
+
         if (table.includes(vertex)) {
           console.log(`The number ${vertex} is in the table data.`);
         } else {
           console.log(`The number ${vertex} is not found.`);
         }
-        index = table.indexOf(vertex)
-        console.log(table.indexOf(vertex))
 
         if (index !== -1) {
           console.log(`The location (index) of ${vertex} is: ${index}`);
@@ -419,175 +374,223 @@
           console.log(`${vertex} was not found in the array.`);
         }
 
+        if (index === -1) return [];   // vertex not in table → no coords
+
+        const coords = [];
+        for (let y = 0; y < originalHeight; y++) {
+          const row = mappingData[y];
+          for (let x = 0; x < originalWidth; x++) {
+            if (row[x] === index) {
+              coords.push([x, y]);   // store original (full‑res) coords
+            }
+          }
+        }
+        return coords;
+      }
+
+      /** Validate that the entered vertex exists in the chosen ICO space. */
+      function validateVertex(icoSpace, vertex) {
+        const table = getLookupTable(icoSpace);
+        if (table.includes(vertex)) {
+          console.log(`The number ${vertex} is in the table data.`);
+        } else {
+          console.log(`The number ${vertex} is not found.`);
+        }
+        const index = table.indexOf(vertex);
+        console.log(`table.indexOf(${vertex}) = ${index}`);
+        if (index !== -1) {
+          console.log(`The location (index) of ${vertex} is: ${index}`);
+        } else {
+          console.log(`${vertex} was not found in the array.`);
+        }
         return table && vertex >= 0 && table.includes(vertex);
       }
 
-    function drawMarker(xScreen, yScreen){
+      /** Draw a green marker at the supplied screen coordinates (does NOT remove previous markers). */
+      function drawMarker(xScreen, yScreen){
         const $m = $('<div class="vertex-marker"></div>');
-        const imgOffset = $image.offset();
-        $m.css({ left: imgOffset.left + xScreen,
-                top:  imgOffset.top  + yScreen });
+        const imgOffset = image.offset();
+        $m.css({
+          left: imgOffset.left + xScreen,
+          top:  imgOffset.top  + yScreen
+        });
         $('body').append($m);
-    }
-
-    /* --------------------------------------------------------------
-       UI – file uploads
-       -------------------------------------------------------------- */
-    $('#imageUpload').on('change', e=>{
-      const file = e.target.files[0];
-      if (file){
-        $fileName.text(`File: ${file.name}`);
-        const url = URL.createObjectURL(file);
-        $image.attr('src',url).on('load', updateDisplaySize);
       }
-    });
 
-    $('#dataUpload').on('change', e=>{
-      const file = e.target.files[0];
-      if (file){
-        $fileName.text(`Data Matrix File: ${file.name}`);
-        const reader = new FileReader();
-        reader.onload = ev=>{
-          try{
-            const txt = ev.target.result;
-            dataMatrix = txt.replace(/\n/g,'')
-                            .replace(/[\[\]]/g,'')
-                            .split(',')
-                            .map(v=>v.trim())
-                            .filter(v=>v.length>0)
-                            .map(v=>parseFloat(v));
-            const len = dataMatrix.length;
-            currentIcoSpace = determineIcoSpace(len);
-            if (!currentIcoSpace){
-              console.error('Unexpected data‑matrix length:',len);
+      // -----------------------------------------------------------------
+      // UI – file uploads (unchanged)
+      // -----------------------------------------------------------------
+      $('#imageUpload').on('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+          fileNameInfo.text(`File: ${file.name}`);
+          const url = URL.createObjectURL(file);
+          image.attr('src', url).on('load', updateDisplaySize);
+        }
+      });
+
+      $('#dataUpload').on('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+          fileNameInfo.text(`Data Matrix File: ${file.name}`);
+          console.log(`Loading data matrix from file: ${file.name}`);
+
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            try {
+              const textContent = event.target.result;
+              dataMatrix = textContent
+                .replace(/\n/g, '')
+                .replace(/[\[\]]/g, '')
+                .split(',')
+                .map(v => v.trim())
+                .filter(v => v.length > 0)
+                .map(v => parseFloat(v));
+
+              console.log('Data matrix loaded:', dataMatrix);
+              const dataLength = dataMatrix.length;
+              console.log(`Data matrix length: ${dataLength}`);
+              currentIcoSpace = determineIcoSpace(dataLength);
+              if (currentIcoSpace) {
+                console.log(`Data matrix identified as ${currentIcoSpace} space`);
+              } else {
+                console.error('Unexpected data matrix length');
+                dataMatrix = null;
+                currentIcoSpace = null;
+              }
+            } catch (err) {
+              console.error('Error parsing TXT file:', err);
+              dataMatrix = null;
+              currentIcoSpace = null;
             }
-          }catch(err){
-            console.error('Error parsing TXT file:',err);
+          };
+          reader.readAsText(file);
+        }
+      });
+
+      // -----------------------------------------------------------------
+      // UI – reverse‑lookup button (multiple green dots)
+      // -----------------------------------------------------------------
+      $('#show-vertex-btn').on('click', ()=>{
+        const ico   = $('#ico-select').val();
+        const vStr  = $('#vertex-input').val();
+
+        // ---- basic validation -------------------------------------------------
+        if (vStr === '' || isNaN(vStr)){
+          alert('Please type a numeric vertex index.');
+          return;
+        }
+        const vertex = parseInt(vStr, 10);
+        if (!validateVertex(ico, vertex)){
+          alert(`Vertex ${vertex} is not valid for ${ico}.`);
+          return;
+        }
+
+        // ---- find **all** coordinates in the mapping table --------------------
+        const allCoords = getVertexCoordinates(ico, vertex);
+        if (allCoords.length === 0){
+          alert(`Vertex ${vertex} does not appear in the mapping image.`);
+          return;
+        }
+
+        // ---- clear any previous markers (optional – you can comment out) ----
+        $('.vertex-marker').remove();
+
+        // ---- draw a green dot for each coordinate ----------------------------
+        allCoords.forEach(coord => {
+          const [origX, origY] = coord;
+          const screenX = Math.round(origX / scaleX);
+          const screenY = Math.round(origY / scaleY);
+          drawMarker(screenX, screenY);
+        });
+      });
+
+      // -----------------------------------------------------------------
+      // Existing hover‑info (unchanged – still logs everything)
+      // -----------------------------------------------------------------
+      image.on('mousemove', function (e) {
+        const rect = this.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+          const mouseXOrig = Math.floor(x * scaleX);
+          const mouseYOrig = Math.floor(y * scaleY);
+          console.log(`Mouse: (${x.toFixed(1)}, ${y.toFixed(1)}) → Scaled: (${mouseXOrig}, ${mouseYOrig})`);
+
+          const vertex = getVertexFromMapping(mouseXOrig, mouseYOrig);
+
+          if (vertex !== null) {
+            // ICO lookup values
+            const ico8   = lookupTableIco8[vertex];
+            const ico16  = lookupTableIco16[vertex];
+            const ico32  = lookupTableIco32[vertex];
+            const ico64  = lookupTableIco64[vertex];
+            const ico128 = lookupTableIco128[vertex];
+
+            // DS128 parcellation values
+            const ds128_aparc_val       = ds128_aparc       ? ds128_aparc[vertex]       : 'N/A';
+            const ds128_aparc_a2009s_val = ds128_aparc_a2009s ? ds128_aparc_a2009s[vertex] : 'N/A';
+            const ds128_aparc_DKTatlas_val = ds128_aparc_DKTatlas ? ds128_aparc_DKTatlas[vertex] : 'N/A';
+
+            // Anatomical labels
+            const destrieux = destrieux_aparc ? destrieux_aparc[vertex] : 'N/A';
+            const dk        = dk_aparc        ? dk_aparc[vertex]        : 'N/A';
+            const dkt       = dkt_aparc       ? dkt_aparc[vertex]       : 'N/A';
+
+            // Data‑matrix value for the currently loaded ICO space
+            let dataValue = 'N/A';
+            if (dataMatrix && currentIcoSpace) {
+              const lt = getLookupTable(currentIcoSpace);
+              console.log(`Using lookup table for ${currentIcoSpace} space`);
+              if (lt) {
+                const idx = lt[vertex];
+                dataValue = dataMatrix[idx] !== undefined ? dataMatrix[idx] : 'N/A';
+                console.log(`Retrieved data value from ${currentIcoSpace} space at index ${idx}: ${dataValue}`);
+              }
+            }
+
+            const html = `
+              <br><strong>onavg coordinate:</strong><br>
+              ico8: ${ico8}<br>
+              ico16: ${ico16}<br>
+              ico32: ${ico32}<br>
+              ico64: ${ico64}<br>
+              ico128: ${ico128}<br><br>
+
+              <strong>ds128 parcellation (ico128):</strong><br>
+              aparc: ${ds128_aparc_val}<br>
+              aparc.a2009s: ${ds128_aparc_a2009s_val}<br>
+              aparc.DKTatlas: ${ds128_aparc_DKTatlas_val}<br><br>
+
+              <strong>onavg anatomical parcellation (ico128):</strong><br>
+              destrieux: ${destrieux}<br>
+              dk: ${dk}<br>
+              dkt: ${dkt}<br><br>
+
+              <strong>Data Matrix Value in ${currentIcoSpace || '—'} space:</strong><br>
+              value: ${dataValue}<br><br>
+            `;
+            vertexInfo.html(html);
+          } else {
+            vertexInfo.text('No vertex selected');
           }
-        };
-        reader.readAsText(file);
-      }
-    });
+        } else {
+          vertexInfo.text('No vertex selected');
+        }
+      });
 
-    /* --------------------------------------------------------------
-       UI – reverse‑lookup button
-       -------------------------------------------------------------- */
-   $('#show-vertex-btn').on('click', ()=>{
-    const ico   = $('#ico-select').val();
-    const vStr  = $('#vertex-input').val();
+      image.on('mouseleave',()=>{ vertexInfo.text('No vertex selected'); });
 
-    // ---- basic validation -------------------------------------------------
-    if (vStr === '' || isNaN(vStr)){
-        alert('Please type a numeric vertex index.');
-        return;
-    }
-    const vertex = parseInt(vStr, 10);
-    if (!validateVertex(ico, vertex)){
-        alert(`Vertex ${vertex} is not valid for ${ico}.`);
-        return;
-    }
+      // -----------------------------------------------------------------
+      // Initialise everything
+      // -----------------------------------------------------------------
+      $(document).ready(()=>{
+        displayFileName();
+        loadData();
+        $(window).on('resize', updateDisplaySize);
+      });
 
-    // ---- find **all** original (x,y) positions in the mapping table --------
-    const allCoords = getVertexCoordinates(ico, vertex);
-    if (allCoords.length === 0){
-        alert(`Vertex ${vertex} does not appear in the mapping image.`);
-        return;
-    }
-
-    // ---- clear any previous markers ---------------------------------------
-    $('.vertex-marker').remove();
-
-    // ---- convert each to screen coordinates and draw a green dot ----------
-    allCoords.forEach(coord => {
-        const [origX, origY] = coord;
-        const screenX = Math.round(origX / scaleX);
-        const screenY = Math.round(origY / scaleY);
-        drawMarker(screenX, screenY);
-    });
-});
-
-    /* --------------------------------------------------------------
-       Existing hover‑info (unchanged – still useful)
-       -------------------------------------------------------------- */
-    $image.on('mousemove', e=>{
-      const rect = $image[0].getBoundingClientRect();
-      const x = e.clientX - rect.left,
-            y = e.clientY - rect.top;
-      if (x<0||y<0||x>rect.width||y>rect.height){ $vertexInfo.text('No vertex selected');return; }
-
-      const mx = Math.floor(x * scaleX),
-            my = Math.floor(y * scaleY);
-      const vertex = getVertexFromMapping(mx,my);
-
-      if (vertex===null){
-        $vertexInfo.text('No vertex selected');
-        return;
-      }
-
-      // ICO lookup values
-              const ico8   = lookupTableIco8[vertex];
-              const ico16  = lookupTableIco16[vertex];
-              const ico32  = lookupTableIco32[vertex];
-              const ico64  = lookupTableIco64[vertex];
-              const ico128 = lookupTableIco128[vertex];
-
-              // DS128 parcellation values
-              const ds128_aparc_val       = ds128_aparc       ? ds128_aparc[vertex]       : 'N/A';
-              const ds128_aparc_a2009s_val = ds128_aparc_a2009s ? ds128_aparc_a2009s[vertex] : 'N/A';
-              const ds128_aparc_DKTatlas_val = ds128_aparc_DKTatlas ? ds128_aparc_DKTatlas[vertex] : 'N/A';
-
-              // Anatomical labels
-              const destrieux = destrieux_aparc ? destrieux_aparc[vertex] : 'N/A';
-              const dk        = dk_aparc        ? dk_aparc[vertex]        : 'N/A';
-              const dkt       = dkt_aparc       ? dkt_aparc[vertex]       : 'N/A';
-
-              // Get data value based on current ico space
-                  let dataValue = 'N/A';
-                  if (dataMatrix && currentIcoSpace) {
-                    const lookupTable = getLookupTable(currentIcoSpace);
-                    console.log(`Using lookup table for ${currentIcoSpace} space`);
-                    if (lookupTable) {
-                      const dataIndex = lookupTable[vertex];
-                      dataValue = dataMatrix[dataIndex] !== undefined ? dataMatrix[dataIndex] : 'N/A';
-                      console.log(`Retrieved data value from ${currentIcoSpace} space at index ${dataIndex}: ${dataValue}`);
-                    }
-                  }
-    // Build and inject HTML
-                  const html = `
-                    <br><strong>onavg coordinate:</strong><br>
-                    ico8: ${ico8}<br>
-                    ico16: ${ico16}<br>
-                    ico32: ${ico32}<br>
-                    ico64: ${ico64}<br>
-                    ico128: ${ico128}<br><br>
-
-                    <strong>ds128 parcellation (ico128):</strong><br>
-                    aparc: ${ds128_aparc_val}<br>
-                    aparc.a2009s: ${ds128_aparc_a2009s_val}<br>
-                    aparc.DKTatlas: ${ds128_aparc_DKTatlas_val}<br><br>
-
-                    <strong>onavg anatomical parcellation (ico128):</strong><br>
-                    destrieux: ${destrieux}<br>
-                    dk: ${dk}<br>
-                    dkt: ${dkt} <br>
-
-                    <br><strong>Data Matrix Value in ${currentIcoSpace} space:</strong><br>
-                     value: ${dataValue}<br><br>
-
-                  `;
-      $vertexInfo.html(html);
-    });
-
-    $image.on('mouseleave',()=>{ $vertexInfo.text('No vertex selected'); });
-
-    /* --------------------------------------------------------------
-       Initialise everything
-       -------------------------------------------------------------- */
-    $(document).ready(()=>{
-      displayFileName();
-      loadData();
-      $(window).on('resize', updateDisplaySize);
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>
