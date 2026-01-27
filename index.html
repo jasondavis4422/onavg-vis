@@ -385,6 +385,25 @@
         return coords;
       }
 
+       function getCoordinates(icoSpace, index){
+        const table = getLookupTable(icoSpace);
+        let index;
+        if (index === -1) return [];   // vertex not in table
+
+        const coords = [];
+        for (let y = 0; y < originalHeight; y++) {
+          const row = mappingData[y];
+          for (let x = 0; x < originalWidth; x++) {
+            if (row[x] === index) {
+              coords.push([x, y]);
+            }
+          }
+        }
+        console.log(coords)
+        return coords;
+      }
+
+
       /** Validate that the entered vertex exists in the chosen ICO space. */
       function validateVertex(icoSpace, vertex) {
         const table = getLookupTable(icoSpace);
@@ -502,6 +521,7 @@
           case 'dk':        table = dk_aparc;        break;
           case 'dkt':       table = dkt_aparc;       break;
           default: return [];
+          console.log(table)
         }
         if (!table) return [];
 
@@ -509,6 +529,7 @@
         table.forEach((label, idx) => {
           if (label === name) indices.push(idx);
         });
+        console.log(indices)
         return indices;
       }
 
@@ -526,7 +547,7 @@
         $('.vertex-marker').remove();
 
         indices.forEach(vIdx => {
-          const coords = getVertexCoordinates('ico8', vIdx);
+          const coords = getCoordinates('ico8', vIdx);
           coords.forEach(coord => {
             const [origX, origY] = coord;
             const screenX = Math.round(origX / scaleX);
