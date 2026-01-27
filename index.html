@@ -98,11 +98,11 @@
         cursor: pointer;
         font-size: 14px;
       }
-      /* NEW: panel placed at the top‑right corner (same as monkey version) */
+      /* NEW: panel placed at the top‑right corner */
       #search-panel {
         position: fixed;
         top: 10px;
-        right: 120px;               /* space from the “Instructions” button */
+        right: 120px;
         background-color: rgba(0,0,0,0.8);
         padding: 8px;
         border-radius: 5px;
@@ -125,7 +125,7 @@
         border-radius: 50%;
         pointer-events: none;
         transform: translate(-50%, -50%);
-        z-index: 120;     /* on top of everything else */
+        z-index: 120;
       }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -149,8 +149,18 @@
 
       <label for="vertex-input">Vertex index:</label>
       <input type="number" id="vertex-input" min="0" placeholder="e.g. 123" />
-
       <button id="show-vertex-btn">Show</button>
+
+      <!-- ----- NEW: Search by anatomical name ----- -->
+      <label for="parc-select">Parcellation:</label>
+      <select id="parc-select">
+        <option value="destrieux">Destrieux</option>
+        <option value="dk">DK</option>
+        <option value="dkt">DKT</option>
+      </select>
+
+      <input type="text" id="region-input" placeholder="e.g. Precentral_L" />
+      <button id="show-region-btn">Show Region</button>
     </div>
 
     <div id="upload-container">
@@ -355,33 +365,20 @@
       // -----------------------------------------------------------------
       /**
        * Return every pixel that contains the requested vertex.
-       * The function returns an array of [x, y] pairs (original image coordinates).
-       * If the vertex is not present, an empty array is returned.
+       * Returns an array of [x, y] pairs (original image coordinates).
        */
       function getVertexCoordinates(icoSpace, vertex){
         const table = getLookupTable(icoSpace);
         const index = table.indexOf(vertex);
 
-        if (table.includes(vertex)) {
-          console.log(`The number ${vertex} is in the table data.`);
-        } else {
-          console.log(`The number ${vertex} is not found.`);
-        }
-
-        if (index !== -1) {
-          console.log(`The location (index) of ${vertex} is: ${index}`);
-        } else {
-          console.log(`${vertex} was not found in the array.`);
-        }
-
-        if (index === -1) return [];   // vertex not in table → no coords
+        if (index === -1) return [];   // vertex not in table
 
         const coords = [];
         for (let y = 0; y < originalHeight; y++) {
           const row = mappingData[y];
           for (let x = 0; x < originalWidth; x++) {
             if (row[x] === index) {
-              coords.push([x, y]);   // store original (full‑res) coords
+              coords.push([x, y]);
             }
           }
         }
@@ -391,22 +388,10 @@
       /** Validate that the entered vertex exists in the chosen ICO space. */
       function validateVertex(icoSpace, vertex) {
         const table = getLookupTable(icoSpace);
-        if (table.includes(vertex)) {
-          console.log(`The number ${vertex} is in the table data.`);
-        } else {
-          console.log(`The number ${vertex} is not found.`);
-        }
-        const index = table.indexOf(vertex);
-        console.log(`table.indexOf(${vertex}) = ${index}`);
-        if (index !== -1) {
-          console.log(`The location (index) of ${vertex} is: ${index}`);
-        } else {
-          console.log(`${vertex} was not found in the array.`);
-        }
         return table && vertex >= 0 && table.includes(vertex);
       }
 
-      /** Draw a green marker at the supplied screen coordinates (does NOT remove previous markers). */
+      /** Draw a green marker at the supplied screen coordinates. */
       function drawMarker(xScreen, yScreen){
         const $m = $('<div class="vertex-marker"></div>');
         const imgOffset = image.offset();
@@ -469,13 +454,13 @@
       });
 
       // -----------------------------------------------------------------
-      // UI – reverse‑lookup button (multiple green dots)
+      // UI – reverse‑lookup button (numeric vertex)
       // -----------------------------------------------------------------
       $('#show-vertex-btn').on('click', ()=>{
         const ico   = $('#ico-select').val();
         const vStr  = $('#vertex-input').val();
 
-        // ---- basic validation -------------------------------------------------
+        // basic validation
         if (vStr === '' || isNaN(vStr)){
           alert('Please type a numeric vertex index.');
           return;
@@ -486,17 +471,15 @@
           return;
         }
 
-        // ---- find **all** coordinates in the mapping table --------------------
         const allCoords = getVertexCoordinates(ico, vertex);
         if (allCoords.length === 0){
           alert(`Vertex ${vertex} does not appear in the mapping image.`);
           return;
         }
 
-        // ---- clear any previous markers (optional – you can comment out) ----
+        // clear previous markers
         $('.vertex-marker').remove();
 
-        // ---- draw a green dot for each coordinate ----------------------------
         allCoords.forEach(coord => {
           const [origX, origY] = coord;
           const screenX = Math.round(origX / scaleX);
@@ -506,7 +489,79 @@
       });
 
       // -----------------------------------------------------------------
-      // Existing hover‑info (unchanged – still logs everything)
+      // NEW: helpers for anatomical‐name lookup
+      // -----------------------------------------------------------------
+      /**
+       * Return all ico8 vertex indices that belong to the supplied region name
+       * in the chosen parcellation table.
+       */
+      function getIndicesForRegion(parc, name){
+        let table;
+        switch(parc){
+          case 'destrieux': table = destrieux_aparc; break;
+          case 'dk':        table = dk_aparc;        break;
+          case 'dkt':       table = dkt_aparc;       break;
+          default: return [];
+        }
+        if (!table) return [];
+
+        const indices = [];
+        table.forEach((label, idx) => {
+          if (label === name) indices.push(idx);
+        });
+        return indices;
+      }
+
+      /**
+       * Draw green markers for all vertices that belong to the given region.
+       */
+      function showRegion(parc, name){
+        const indices = getIndicesForRegion(parc, name);
+        if (indices.length === 0){
+          alert(`No vertices found for region "${name}" in ${parc} parcellation.`);
+          return;
+        }
+
+        // clear previous markers
+        $('.vertex-marker').remove();
+
+        indices.forEach(vIdx => {
+          const coords = getVertexCoordinates('ico8', vIdx);
+          coords.forEach(coord => {
+            const [origX, origY] = coord;
+            const screenX = Math.round(origX / scaleX);
+            const screenY = Math.round(origY / scaleY);
+            drawMarker(screenX, screenY);
+          });
+        });
+      }
+
+      // -----------------------------------------------------------------
+      // UI – region‑by‑name button
+      // -----------------------------------------------------------------
+      $('#show-region-btn').on('click', () => {
+        const parc = $('#parc-select').val();
+        const name = $('#region-input').val().trim();
+
+        if (name === ''){
+          alert('Please type an anatomical region name.');
+          return;
+        }
+
+        // make sure the selected lookup table has been loaded
+        const tableLoaded = (parc === 'destrieux' && destrieux_aparc) ||
+                           (parc === 'dk' && dk_aparc) ||
+                           (parc === 'dkt' && dkt_aparc);
+        if (!tableLoaded){
+          alert(`Parcellation data for "${parc}" is not yet loaded.`);
+          return;
+        }
+
+        showRegion(parc, name);
+      });
+
+      // -----------------------------------------------------------------
+      // Existing hover‑info (unchanged)
       // -----------------------------------------------------------------
       image.on('mousemove', function (e) {
         const rect = this.getBoundingClientRect();
@@ -529,7 +584,7 @@
             const ico128 = lookupTableIco128[vertex];
 
             // DS128 parcellation values
-            const ds128_aparc_val       = ds128_aparc       ? ds128_aparc[vertex]       : 'N/A';
+            const ds128_aparc_val       = ds128_aparc ? ds128_aparc[vertex] : 'N/A';
             const ds128_aparc_a2009s_val = ds128_aparc_a2009s ? ds128_aparc_a2009s[vertex] : 'N/A';
             const ds128_aparc_DKTatlas_val = ds128_aparc_DKTatlas ? ds128_aparc_DKTatlas[vertex] : 'N/A';
 
@@ -542,11 +597,9 @@
             let dataValue = 'N/A';
             if (dataMatrix && currentIcoSpace) {
               const lt = getLookupTable(currentIcoSpace);
-              console.log(`Using lookup table for ${currentIcoSpace} space`);
               if (lt) {
                 const idx = lt[vertex];
                 dataValue = dataMatrix[idx] !== undefined ? dataMatrix[idx] : 'N/A';
-                console.log(`Retrieved data value from ${currentIcoSpace} space at index ${idx}: ${dataValue}`);
               }
             }
 
@@ -590,7 +643,6 @@
         loadData();
         $(window).on('resize', updateDisplaySize);
       });
-
     </script>
   </body>
 </html>
