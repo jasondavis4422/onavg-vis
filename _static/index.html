@@ -385,16 +385,15 @@
         return coords;
       }
 
-       function getCoordinates(icoSpace, index){
+       function getCoordinates(icoSpace, index_val){
         const table = getLookupTable(icoSpace);
-        let index;
-        if (index === -1) return [];   // vertex not in table
+        if (index_val === -1) return [];   // vertex not in table
 
         const coords = [];
         for (let y = 0; y < originalHeight; y++) {
           const row = mappingData[y];
           for (let x = 0; x < originalWidth; x++) {
-            if (row[x] === index) {
+            if (row[x] === index_val) {
               coords.push([x, y]);
             }
           }
