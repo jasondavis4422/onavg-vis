@@ -218,14 +218,14 @@
         <p id="file-name"></p>
         <p id="vertex-info">
           Hover over the image to see vertex information. Each vertex contains
-          the relevant numerical and string‑labeled parcel.
+          the relevant numerical and string‑labeled parcel in the human brain.
         </p>
       </div>
     </div>
 
     <script>
       // -----------------------------------------------------------------
-      // GLOBAL VARIABLES – unchanged from the original human file
+      // GLOBAL VARIABLES
       // -----------------------------------------------------------------
       let mappingData = null,
           lookupTableIco8 = null,
@@ -251,7 +251,7 @@
       const fileNameInfo = $('#file-name');
 
       // -----------------------------------------------------------------
-      // UTILITY FUNCTIONS (still exactly the same)
+      // UTILITY FUNCTIONS 
       // -----------------------------------------------------------------
       function determineIcoSpace(dataLength) {
         switch(dataLength) {
@@ -298,7 +298,7 @@
       }
 
       // -----------------------------------------------------------------
-      // LOAD ALL JSON FILES (unchanged)
+      // LOAD ALL JSON FILES
       // -----------------------------------------------------------------
       function loadData() {
         $.when(
@@ -360,13 +360,6 @@
         });
       }
 
-      // -----------------------------------------------------------------
-      // NEW HELPERS – reverse lookup from vertex → (x,y) (same as monkey code)
-      // -----------------------------------------------------------------
-      /**
-       * Return every pixel that contains the requested vertex.
-       * Returns an array of [x, y] pairs (original image coordinates).
-       */
       function getVertexCoordinates(icoSpace, vertex){
         const table = getLookupTable(icoSpace);
         const index = table.indexOf(vertex);
@@ -421,7 +414,7 @@
       }
 
       // -----------------------------------------------------------------
-      // UI – file uploads (unchanged)
+      // UI – file uploads
       // -----------------------------------------------------------------
       $('#imageUpload').on('change', function (e) {
         const file = e.target.files[0];
@@ -506,56 +499,59 @@
         });
       });
 
-      // -----------------------------------------------------------------
-      // NEW: helpers for anatomical‐name lookup
-      // -----------------------------------------------------------------
-      /**
-       * Return all ico8 vertex indices that belong to the supplied region name
-       * in the chosen parcellation table.
-       */
-      function getIndicesForRegion(parc, name){
-        let table;
-        switch(parc){
-          case 'destrieux': table = destrieux_aparc; break;
-          case 'dk':        table = dk_aparc;        break;
-          case 'dkt':       table = dkt_aparc;       break;
-          default: return [];
-          console.log(table)
+      function getIndicesForRegion(parc, name) {
+          let table;
+          switch (parc) {
+            case 'destrieux': table = destrieux_aparc; break;
+            case 'dk': table = dk_aparc; break;
+            case 'dkt': table = dkt_aparc; break;
+            default: return [];
+              console.log(table)
+          }
+
+          if (!table) return null;
+
+          // Scan the lookup table and stop at the first match
+          for (let idx = 0; idx < table.length; idx++) {
+            if (table[idx] === name) {
+              return idx;               // <-- first matching vertex found
+            }
+          }
+
+          // No vertex with the requested label
+          return null;
         }
-        if (!table) return [];
 
-        const indices = [];
-        table.forEach((label, idx) => {
-          if (label === name) indices.push(idx);
-        });
-        console.log(indices)
-        return indices;
-      }
-
-      /**
-       * Draw green markers for all vertices that belong to the given region.
-       */
-      function showRegion(parc, name){
+      function showRegion(parc, name) {
+        // 1️⃣ Get all vertex indices that belong to the region
         const indices = getIndicesForRegion(parc, name);
-        if (indices.length === 0){
+        if (indices.length === 0) {
           alert(`No vertices found for region "${name}" in ${parc} parcellation.`);
           return;
         }
 
-        // clear previous markers
+        // 2️⃣ Pick the **first** vertex index only
+        const firstVertexIdx = indices;
+
+        // 3️⃣ Retrieve its coordinates (original image space)
+        //    The original helper is called `getVertexCoordinates`.  If you renamed it
+        //    to `getCoordinates`, replace the call accordingly.
+        const coords = getCoordinates('ico8', firstVertexIdx);
+
+        if (coords.length === 0) {
+          alert(`Vertex ${firstVertexIdx} does not appear in the mapping image.`);
+          return;
+        }
+
+        // 4️⃣ Use only the first coordinate pair
+        const [origX, origY] = coords[0];
+        const screenX = Math.round(origX / scaleX);
+        const screenY = Math.round(origY / scaleY);
+
+        // 5️⃣ Clear previous markers and draw the single dot
         $('.vertex-marker').remove();
-
-        indices.forEach(vIdx => {
-          const coords = getCoordinates('ico8', vIdx);
-          coords.forEach(coord => {
-            const [origX, origY] = coord;
-            const screenX = Math.round(origX / scaleX);
-            const screenY = Math.round(origY / scaleY);
-            drawMarker(screenX, screenY);
-          });
-        });
+        drawMarker(screenX, screenY);
       }
-
       // -----------------------------------------------------------------
       // UI – region‑by‑name button
       // -----------------------------------------------------------------
@@ -581,7 +577,7 @@
       });
 
       // -----------------------------------------------------------------
-      // Existing hover‑info (unchanged)
+      // Existing hover‑info 
       // -----------------------------------------------------------------
       image.on('mousemove', function (e) {
         const rect = this.getBoundingClientRect();
