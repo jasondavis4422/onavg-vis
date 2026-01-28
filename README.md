@@ -1,6 +1,9 @@
-This is a tool where you can upload a 2d brain image, hover your mouse on a particular location, and view its onavg vertex index in many resolutions (ico8, ico16, ico32, ico64, ico128). <br>
-It also provides the numerical and string-labeled location based on the following widely-used anatomical parcellations (Destrieux, DK, DKT). References provided below.<br>
+This is a tool where you can upload a 2d brain image, hover your mouse on a particular location, and view its onavg vertex index in many resolutions (ico8, ico16, ico32, ico64, ico128). This tool also allows you to input a masked dataset in a specific ico resolution space and find its corresponding numerical value at the specific location. Finally, this tool also allows you to input a specific vertex in a specific resolution and find its location via a green dot placed on the brain. Thus, this tools allows you to better locate the vertices for your own data analysis in neuroboros.<br>
+
+It provides the numerical and string-labeled location based on the following widely-used anatomical parcellations (Destrieux, DK, DKT). References provided below. While names may not be perfectly exact, it does provide well-suited locations based on the anatomical maps. As best practice, to find a location that is consistently activated, find a region that is aligned across multiple atlases.<br>
+
 This tool is adapted from Elizabeth Li's version located here: https://elizabeth-li-shuxuan.github.io/onavg-vis/
+There is also a monkey brain version of this tool located here: https://jasondavis4422.github.io/onavg-vis-monkey/
 
 Anatomical Atlases: <br>
 
