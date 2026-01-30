@@ -318,22 +318,42 @@
         updateDisplaySize();
       });
     }
-
-    function getCoordinates(icoSpace, indexVal){
+  
+    function getVertexCoordinates(icoSpace, vertex){
       const table = getLookupTable(icoSpace);
-      if (indexVal === -1) return [];
+      const index = table.indexOf(vertex);
+
+      if (index === -1) return [];   // vertex not in table
 
       const coords = [];
       for (let y = 0; y < originalHeight; y++) {
         const row = mappingData[y];
         for (let x = 0; x < originalWidth; x++) {
-          if (row[x] === indexVal) {
+          if (row[x] === index) {
             coords.push([x, y]);
           }
         }
       }
       return coords;
     }
+
+   function getCoordinates(icoSpace, index_val){
+        const table = getLookupTable(icoSpace);
+        if (index_val === -1) return [];   // vertex not in table
+
+        const coords = [];
+        for (let y = 0; y < originalHeight; y++) {
+          const row = mappingData[y];
+          for (let x = 0; x < originalWidth; x++) {
+            if (row[x] === index_val) {
+              coords.push([x, y]);
+            }
+          }
+        }
+        console.log(coords)
+        return coords;
+      }
+
 
     function validateVertex(icoSpace, vertex) {
       const table = getLookupTable(icoSpace);
@@ -408,7 +428,7 @@
         return;
       }
 
-      const allCoords = getCoordinates(ico, vertex);
+      const allCoords = getVertexCoordinates(ico, vertex);
       if (allCoords.length === 0){
         alert(`Vertex ${vertex} does not appear in the mapping image.`);
         return;
