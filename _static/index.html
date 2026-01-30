@@ -115,7 +115,7 @@
     #search-panel button {
       margin-right: 6px;
     }
-    /* Green cross that marks the vertex (2 × 2 px) */
+    /* MARKER – green “X” */
     .vertex-marker {
       position: absolute;
       width: 0;
@@ -123,24 +123,14 @@
       pointer-events: none;
       z-index: 120;
     }
-    .vertex-marker::before,
     .vertex-marker::after {
-      content: "";
+      content: "X";
+      color: rgba(0,255,0,0.9);
+      font-weight: bold;
+      font-size: 14px;          /* size of the X */
       position: absolute;
-      background: rgba(0,255,0,0.8);
-    }
-    .vertex-marker::before {
-      width: 5px;
-      height: 5px;
-      left: -1px;
-      top: -1px;
-    }
-    .vertex-marker::after {
-      width: 5px;
-      height: 5px;
-      left: -1px;
-      top: -1px;
-      transform: rotate(90deg);
+      left: -7px;               /* centre the X on the click point */
+      top: -7px;
     }
   </style>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -318,12 +308,12 @@
         updateDisplaySize();
       });
     }
-  
+
     function getVertexCoordinates(icoSpace, vertex){
       const table = getLookupTable(icoSpace);
       const index = table.indexOf(vertex);
 
-      if (index === -1) return [];   // vertex not in table
+      if (index === -1) return [];
 
       const coords = [];
       for (let y = 0; y < originalHeight; y++) {
@@ -339,7 +329,7 @@
 
    function getCoordinates(icoSpace, index_val){
         const table = getLookupTable(icoSpace);
-        if (index_val === -1) return [];   // vertex not in table
+        if (index_val === -1) return [];
 
         const coords = [];
         for (let y = 0; y < originalHeight; y++) {
@@ -350,10 +340,8 @@
             }
           }
         }
-        console.log(coords)
         return coords;
       }
-
 
     function validateVertex(icoSpace, vertex) {
       const table = getLookupTable(icoSpace);
@@ -501,7 +489,7 @@
         return;
       }
 
-      const coords = getCoordinates('ico8', vertexIdx); // using ico8 mapping
+      const coords = getCoordinates('ico8', vertexIdx);
       if (coords.length === 0) {
         alert(`Vertex ${vertexIdx} does not appear in the mapping image.`);
         return;
