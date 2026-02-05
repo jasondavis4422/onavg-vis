@@ -300,9 +300,16 @@
         scaleX = 1,
         scaleY = 1;
 
+          // NEW: Shading mode variables
+    let shadingModeActive = false;
+    let isDrawing = false;
+    let shadedVerticesSet = new Set();
+    let shadedOverlays = [];
+
     const image = $('#brain-image');
     const vertexInfo = $('#vertex-info');
     const fileNameInfo = $('#file-name');
+
 
     // -----------------------------------------------------------------
     // UTILITY FUNCTIONS
