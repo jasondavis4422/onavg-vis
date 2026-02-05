@@ -160,6 +160,12 @@
       font-size: 12px;
       min-width: 150px;
     }
+    #brain-image.shading-active {
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
 
     /* MARKER – green “X” */
     .vertex-marker {
@@ -189,10 +195,7 @@
       z-index: 110;
     }
 
-    /* Change cursor when shading is active */
-    #brain-image.shading-active {
-      cursor: crosshair;
-    }
+   
 
   </style>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -817,15 +820,21 @@
       }
       finishShadingAndExport();
     });
+    
+      image.on('dragstart', function(e) {
+        if (shadingModeActive) {
+          e.preventDefault();
+          return false;
+        }
+      });
 
-    image.on('mousedown', function(e) {
-      if (!shadingModeActive) return;
-      isDrawing = true;
-    });
-
-    image.on('mouseup', function(e) {
-      isDrawing = false;
-    });
+      image.on('mousedown', function(e) {
+        if (shadingModeActive) {
+          e.preventDefault();
+        }
+        if (!shadingModeActive) return;
+        isDrawing = true;
+      });
 
     image.on('mousemove', function(e) {
       if (!shadingModeActive || !isDrawing) return;
