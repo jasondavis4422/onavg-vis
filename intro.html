@@ -115,6 +115,50 @@
     #search-panel button {
       margin-right: 6px;
     }
+     /* NEW: Shading panel (middle-top-right) */
+    #shading-panel {
+      position: fixed;
+      top: 10px;
+      right: 380px;
+      background-color: rgba(0,0,0,0.8);
+      padding: 8px;
+      border-radius: 5px;
+      font-size: 14px;
+      z-index: 85;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    #toggle-shading-btn {
+      padding: 8px 12px;
+      background-color: #555;
+      color: white;
+      border: 2px solid #999;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+    #toggle-shading-btn.active {
+      background-color: #228b22;
+      border-color: #00ff00;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    }
+    #finish-shading-btn {
+      padding: 8px 12px;
+      background-color: #4682b4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #shading-status {
+      color: #ccc;
+      font-size: 12px;
+      min-width: 150px;
+    }
+
     /* MARKER – green “X” */
     .vertex-marker {
       position: absolute;
@@ -132,6 +176,22 @@
       left: -7px;               /* centre the X on the click point */
       top: -7px;
     }
+    /* NEW: Shading overlay – semi-transparent green square */
+    .shading-overlay {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: rgba(0, 255, 0, 0.3);
+      border: 1px solid rgba(0, 255, 0, 0.6);
+      pointer-events: none;
+      z-index: 110;
+    }
+
+    /* Change cursor when shading is active */
+    #brain-image.shading-active {
+      cursor: crosshair;
+    }
+
   </style>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -139,6 +199,13 @@
   <!-- Button to return to homepage -->
   <div id="homepage-button">
     <a href="instructions.html"><button>Instructions</button></a>
+  </div>
+
+   <!-- NEW: Shading panel -->
+  <div id="shading-panel">
+    <button id="toggle-shading-btn">🖍️ Shade Region</button>
+    <span id="shading-status">Shading OFF</span>
+    <button id="finish-shading-btn">Finish & Export</button>
   </div>
 
   <!-- Search panel -->
@@ -526,6 +593,250 @@
       showRegion(parc, name);
     });
 
+
+    // -----------------------------------------------------------------
+    // NEW: SHADING FEATURE FUNCTIONS
+    // -----------------------------------------------------------------
+    function toggleShadingMode() {
+      shadingModeActive = !shadingModeActive;
+      const $btn = $('#toggle-shading-btn');
+      
+      if (shadingModeActive) {
+        $btn.addClass('active');
+        image.addClass('shading-active');
+        updateShadingStatus();
+      } else {
+        $btn.removeClass('active');
+        image.removeClass('shading-active');
+        updateShadingStatus();
+      }
+    }
+
+    function updateShadingStatus() {
+      const status = shadingModeActive ? 'ON' : 'OFF';
+      const count = shadedVerticesSet.size;
+      $('#shading-status').text(`Shading ${status} | Vertices: ${count}`);
+    }
+
+    function recordShadedVertex(mouseXOrig, mouseYOrig) {
+      const vertex = getVertexFromMapping(mouseXOrig, mouseYOrig);
+      
+      if (vertex !== null && !shadedVerticesSet.has(vertex)) {
+        shadedVerticesSet.add(vertex);
+        
+        // Draw overlay
+        const rect = image[0].getBoundingClientRect();
+        const screenX = Math.round(mouseXOrig / scaleX);
+        const screenY = Math.round(mouseYOrig / scaleY);
+        
+        const $overlay = $('<div class="shading-overlay"></div>');
+        const imgOffset = image.offset();
+        $overlay.css({
+          left: imgOffset.left + screenX - 5,
+          top:  imgOffset.top  + screenY - 5
+        });
+        $('body').append($overlay);
+        shadedOverlays.push($overlay);
+        
+        updateShadingStatus();
+      }
+    }
+
+    function clearShading() {
+      shadedVerticesSet.clear();
+      shadedOverlays.forEach($overlay => $overlay.remove());
+      shadedOverlays = [];
+      updateShadingStatus();
+    }
+
+    function convertVertexToAllSpaces(mappingIndex) {
+      const result = {
+        ico8:   lookupTableIco8[mappingIndex],
+        ico16:  lookupTableIco16[mappingIndex],
+        ico32:  lookupTableIco32[mappingIndex],
+        ico64:  lookupTableIco64[mappingIndex],
+        ico128: lookupTableIco128[mappingIndex]
+      };
+      return result;
+    }
+
+    function convertVertexToAllParcellations(mappingIndex) {
+      const result = {
+        ds128_aparc:        ds128_aparc ? ds128_aparc[mappingIndex] : 'N/A',
+        ds128_aparc_a2009s: ds128_aparc_a2009s ? ds128_aparc_a2009s[mappingIndex] : 'N/A',
+        ds128_aparc_DKTatlas: ds128_aparc_DKTatlas ? ds128_aparc_DKTatlas[mappingIndex] : 'N/A',
+        destrieux:          destrieux_aparc ? destrieux_aparc[mappingIndex] : 'N/A',
+        dk:                 dk_aparc ? dk_aparc[mappingIndex] : 'N/A',
+        dkt:                dkt_aparc ? dkt_aparc[mappingIndex] : 'N/A'
+      };
+      return result;
+    }
+
+    function generateShadingReport() {
+      if (shadedVerticesSet.size === 0) {
+        alert('No vertices have been shaded. Please shade a region first.');
+        return null;
+      }
+
+      let reportText = '=== BRAIN VERTEX SHADING REPORT ===\n\n';
+      reportText += `Total vertices shaded: ${shadedVerticesSet.size}\n`;
+      reportText += `Timestamp: ${new Date().toISOString()}\n\n`;
+
+      // Sort vertices for consistent output
+      const sortedVertices = Array.from(shadedVerticesSet).sort((a, b) => a - b);
+
+      reportText += '=== ICO SPACE CONVERSIONS ===\n\n';
+      
+      const ico8Vertices = new Set();
+      const ico16Vertices = new Set();
+      const ico32Vertices = new Set();
+      const ico64Vertices = new Set();
+      const ico128Vertices = new Set();
+
+      sortedVertices.forEach(mappingIdx => {
+        const spaces = convertVertexToAllSpaces(mappingIdx);
+        ico8Vertices.add(spaces.ico8);
+        ico16Vertices.add(spaces.ico16);
+        ico32Vertices.add(spaces.ico32);
+        ico64Vertices.add(spaces.ico64);
+        ico128Vertices.add(spaces.ico128);
+      });
+
+      reportText += `ICO8 Vertices (${ico8Vertices.size}):\n`;
+      reportText += Array.from(ico8Vertices).sort((a, b) => a - b).join(', ') + '\n\n';
+
+      reportText += `ICO16 Vertices (${ico16Vertices.size}):\n`;
+      reportText += Array.from(ico16Vertices).sort((a, b) => a - b).join(', ') + '\n\n';
+
+      reportText += `ICO32 Vertices (${ico32Vertices.size}):\n`;
+      reportText += Array.from(ico32Vertices).sort((a, b) => a - b).join(', ') + '\n\n';
+
+      reportText += `ICO64 Vertices (${ico64Vertices.size}):\n`;
+      reportText += Array.from(ico64Vertices).sort((a, b) => a - b).join(', ') + '\n\n';
+
+      reportText += `ICO128 Vertices (${ico128Vertices.size}):\n`;
+      reportText += Array.from(ico128Vertices).sort((a, b) => a - b).join(', ') + '\n\n';
+
+      reportText += '=== ANATOMICAL PARCELLATIONS ===\n\n';
+
+      const destrieixLabels = new Set();
+      const dkLabels = new Set();
+      const dktLabels = new Set();
+      const ds128Aparc = new Set();
+      const ds128AparcA2009s = new Set();
+      const ds128AparcDKT = new Set();
+
+      sortedVertices.forEach(mappingIdx => {
+        const parcs = convertVertexToAllParcellations(mappingIdx);
+        destrieixLabels.add(parcs.destrieux);
+        dkLabels.add(parcs.dk);
+        dktLabels.add(parcs.dkt);
+        ds128Aparc.add(parcs.ds128_aparc);
+        ds128AparcA2009s.add(parcs.ds128_aparc_a2009s);
+        ds128AparcDKT.add(parcs.ds128_aparc_DKTatlas);
+      });
+
+      reportText += `Destrieux Labels (${destrieixLabels.size}):\n`;
+      reportText += Array.from(destrieixLabels).filter(x => x !== 'N/A').sort().join(', ') + '\n\n';
+
+      reportText += `DK Labels (${dkLabels.size}):\n`;
+      reportText += Array.from(dkLabels).filter(x => x !== 'N/A').sort().join(', ') + '\n\n';
+
+      reportText += `DKT Labels (${dktLabels.size}):\n`;
+      reportText += Array.from(dktLabels).filter(x => x !== 'N/A').sort().join(', ') + '\n\n';
+
+      reportText += `DS128 APARC (${ds128Aparc.size}):\n`;
+      reportText += Array.from(ds128Aparc).filter(x => x !== 'N/A').sort().join(', ') + '\n\n';
+
+      reportText += `DS128 APARC.A2009s (${ds128AparcA2009s.size}):\n`;
+      reportText += Array.from(ds128AparcA2009s).filter(x => x !== 'N/A').sort().join(', ') + '\n\n';
+
+      reportText += `DS128 APARC.DKTatlas (${ds128AparcDKT.size}):\n`;
+      reportText += Array.from(ds128AparcDKT).filter(x => x !== 'N/A').sort().join(', ') + '\n\n';
+
+      reportText += '=== DETAILED VERTEX MAPPING ===\n\n';
+      reportText += 'MappingIndex | ICO8 | ICO16 | ICO32 | ICO64 | ICO128 | Destrieux | DK | DKT | DS128-aparc | DS128-a2009s | DS128-DKT\n';
+      reportText += '-'.repeat(150) + '\n';
+
+      sortedVertices.forEach(mappingIdx => {
+        const spaces = convertVertexToAllSpaces(mappingIdx);
+        const parcs = convertVertexToAllParcellations(mappingIdx);
+        reportText += `${mappingIdx} | ${spaces.ico8} | ${spaces.ico16} | ${spaces.ico32} | ${spaces.ico64} | ${spaces.ico128} | ${parcs.destrieux} | ${parcs.dk} | ${parcs.dkt} | ${parcs.ds128_aparc} | ${parcs.ds128_aparc_a2009s} | ${parcs.ds128_aparc_DKTatlas}\n`;
+      });
+
+      return reportText;
+    }
+
+    function downloadTextFile(text, filename) {
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function finishShadingAndExport() {
+      const report = generateShadingReport();
+      if (report) {
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const filename = `brain_shading_report_${timestamp}.txt`;
+        downloadTextFile(report, filename);
+        
+        // Optional: clear shading after export
+        const userConfirm = confirm('Export complete! Clear shading for a new selection?');
+        if (userConfirm) {
+          clearShading();
+        }
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // NEW: SHADING MODE EVENT HANDLERS
+    // -----------------------------------------------------------------
+    $('#toggle-shading-btn').on('click', function() {
+      toggleShadingMode();
+    });
+
+    $('#finish-shading-btn').on('click', function() {
+      if (shadedVerticesSet.size === 0) {
+        alert('No vertices shaded. Please shade a region first.');
+        return;
+      }
+      finishShadingAndExport();
+    });
+
+    image.on('mousedown', function(e) {
+      if (!shadingModeActive) return;
+      isDrawing = true;
+    });
+
+    image.on('mouseup', function(e) {
+      isDrawing = false;
+    });
+
+    image.on('mousemove', function(e) {
+      if (!shadingModeActive || !isDrawing) return;
+
+      const rect = this.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+        const mouseXOrig = Math.floor(x * scaleX);
+        const mouseYOrig = Math.floor(y * scaleY);
+        recordShadedVertex(mouseXOrig, mouseYOrig);
+      }
+    });
+
+    image.on('mouseleave', function() {
+      isDrawing = false;
+    });
+
+
     // -----------------------------------------------------------------
     // Hover info
     // -----------------------------------------------------------------
@@ -571,12 +882,12 @@
             ico64: ${ico64}<br>
             ico128: ${ico128}<br><br>
 
-            <strong>ds128 parcellation (ico128):</strong><br>
+            <strong> parcellation number (ico8):</strong><br>
             aparc: ${ds128_aparc_val}<br>
             aparc.a2009s: ${ds128_aparc_a2009s_val}<br>
             aparc.DKTatlas: ${ds128_aparc_DKTatlas_val}<br><br>
 
-            <strong>onavg anatomical parcellation (ico128):</strong><br>
+            <strong>onavg anatomical parcellation (ico8):</strong><br>
             destrieux: ${destrieux}<br>
             dk: ${dk}<br>
             dkt: ${dkt}<br><br>
