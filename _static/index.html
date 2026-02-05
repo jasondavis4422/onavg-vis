@@ -115,11 +115,11 @@
     #search-panel button {
       margin-right: 6px;
     }
-     /* NEW: Shading panel (middle-top-right) */
-    #shading-panel {
+        #shading-panel {
       position: fixed;
-      top: 10px;
-      right: 380px;
+      top: 50%;
+      left: 10px;
+      transform: translateY(-50%);
       background-color: rgba(0,0,0,0.8);
       padding: 8px;
       border-radius: 5px;
@@ -128,6 +128,8 @@
       display: flex;
       gap: 8px;
       align-items: center;
+      flex-wrap: wrap;
+      flex-direction: column;
     }
     #toggle-shading-btn {
       padding: 8px 12px;
