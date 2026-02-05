@@ -194,6 +194,16 @@
   pointer-events: none;
   z-index: 110;
 }
+
+#clear-shading-btn {
+  padding: 8px 12px;
+  background-color: #8b4513;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
    
 
   </style>
@@ -205,12 +215,12 @@
     <a href="instructions.html"><button>Instructions</button></a>
   </div>
 
-   <!-- NEW: Shading panel -->
-  <div id="shading-panel">
-    <button id="toggle-shading-btn">🖍️ Shade Region</button>
-    <span id="shading-status">Shading OFF</span>
-    <button id="finish-shading-btn">Finish & Export</button>
-  </div>
+<div id="shading-panel">
+  <button id="toggle-shading-btn">🖍️ Shade Region</button>
+  <span id="shading-status">Shading OFF | Vertices: 0</span>
+  <button id="finish-shading-btn">Finish & Export</button>
+  <button id="clear-shading-btn">Clear Shading</button>
+</div>
 
   <!-- Search panel -->
   <div id="search-panel">
@@ -805,6 +815,7 @@
       }
     }
 
+
     // -----------------------------------------------------------------
     // NEW: SHADING MODE EVENT HANDLERS
     // -----------------------------------------------------------------
@@ -819,6 +830,10 @@
       }
       finishShadingAndExport();
     });
+
+    $('#clear-shading-btn').on('click', function() {
+  clearShading();
+});
     
       image.on('dragstart', function(e) {
         if (shadingModeActive) {
