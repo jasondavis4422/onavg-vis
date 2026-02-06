@@ -40,25 +40,25 @@
       max-height: 80%;
       object-fit: contain;
     }
-    #table-container {
-      position: fixed;
-      bottom: 150px;
-      left: 10px;
-      font-size: 12px;
-      background-color: rgba(0,0,0,0.8);
-      padding: 10px;
-      border-radius: 5px;
-      z-index: 40;
-    }
-    #table-container table {
-      border-collapse: collapse;
-    }
-    #table-container th,
-    #table-container td {
-      border: 0.5px solid white;
-      padding: 4px;
-      text-align: center;
-    }
+ #table-container {
+  position: fixed;           /* stay in place while scrolling */
+  bottom: 150px;             /* distance from the bottom of the viewport */
+  right: 10px;               /* ← change: anchor to the right edge */
+  font-size: 12px;
+  background-color: rgba(0,0,0,0.8);
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 40;
+}
+#table-container table {
+  border-collapse: collapse;
+}
+#table-container th,
+#table-container td {
+  border: 0.5px solid white;
+  padding: 4px;
+  text-align: center;
+}
 
        #info-container {
       position: fixed;
@@ -280,11 +280,9 @@
     <div id="info-container">
       <p id="file-name"></p>
       <p id="vertex-info">
-        <pre>
-        Hover over the image to see vertex information. 
-        Each vertex contains the relevant numerical and 
+        Hover over the image to see vertex information. <br>
+        Each vertex contains the relevant numerical and <br>
         string‑labeled parcel in the human brain.
-        </pre>
       </p>
     </div>
   </div>
