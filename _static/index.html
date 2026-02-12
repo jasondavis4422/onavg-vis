@@ -181,16 +181,16 @@
   }
   
     /* NEW: Shading overlay – semi-transparent green square */
-    .shading-overlay {
+   /* NEW: thinner shading overlay */
+.shading-overlay {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  background-color: rgba(0, 255, 0, 0.3);
-  border: 0.25px solid rgba(0, 255, 0, 0.6);
+  width: 4px;                     /* was 10px   → thinner */
+  height: 4px;                    /* was 10px   → thinner */
+  background-color: rgba(0,255,0,0.3);
+  border: 0.25px solid rgba(0,255,0,0.6);   /* keep or reduce if desired */
   pointer-events: none;
   z-index: 110;
 }
-
 #clear-shading-btn {
   padding: 8px 12px;
   background-color: #8b4513;
@@ -649,9 +649,10 @@
         
         const $overlay = $('<div class="shading-overlay"></div>');
         const imgOffset = image.offset();
+                // inside recordShadedVertex()
         $overlay.css({
-          left: imgOffset.left + screenX - 5,
-          top:  imgOffset.top  + screenY - 5
+          left: imgOffset.left + screenX - 2,   // 2 = 4/2
+          top:  imgOffset.top  + screenY - 2
         });
         $('body').append($overlay);
         shadedOverlays.push($overlay);
