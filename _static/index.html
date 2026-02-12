@@ -162,35 +162,24 @@
   -webkit-touch-callout: none;
 }
 
-   /* MARKER – green "X" with circle */
-.vertex-marker {
-  position: absolute;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  z-index: 120;
-}
-.vertex-marker::before {
-  content: "";
-  position: absolute;
-  width: 16px;        /* reduced from 24px */
-  height: 16px;       /* reduced from 24px */
-  border: 2px solid rgba(0,255,0,0.8);
-  border-radius: 50%;
-  left: -8px;         /* half of width, negative */
-  top: -8px;          /* half of height, negative */
-  box-shadow: 0 0 6px rgba(0, 255, 0, 0.5);
-}
-.vertex-marker::after {
-  content: "X";
-  color: rgba(0,255,0,0.9);
-  font-weight: bold;
-  font-size: 14px;          /* size of the X */
-  position: absolute;
-  left: -7px;               /* centre the X on the click point */
-  top: -7px;
-  z-index: 1;
-}
+    /* MARKER – green "X" */
+  .vertex-marker {
+    position: absolute;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 120;
+  }
+  .vertex-marker::after {
+    content: "X";
+    color: rgba(0,255,0,0.9);
+    font-weight: bold;
+    font-size: 14px;          /* size of the X */
+    position: absolute;
+    left: -7px;               /* centre the X on the click point */
+    top: -7px;
+  }
+  
     /* NEW: Shading overlay – semi-transparent green square */
     .shading-overlay {
   position: absolute;
