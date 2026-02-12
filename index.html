@@ -824,8 +824,8 @@
     }
 
 
-    // -----------------------------------------------------------------
-    // NEW: SHADING MODE EVENT HANDLERS
+      // -----------------------------------------------------------------
+    // NEW: SHADING MODE EVENT HANDLERS (updated)
     // -----------------------------------------------------------------
     $('#toggle-shading-btn').on('click', function() {
       toggleShadingMode();
@@ -840,23 +840,31 @@
     });
 
     $('#clear-shading-btn').on('click', function() {
-  clearShading();
-});
-    
-      image.on('dragstart', function(e) {
-        if (shadingModeActive) {
-          e.preventDefault();
-          return false;
-        }
-      });
+      clearShading();
+    });
 
-      image.on('mousedown', function(e) {
-        if (shadingModeActive) {
-          e.preventDefault();
-        }
-        if (!shadingModeActive) return;
-        isDrawing = true;
-      });
+    // Stop drawing when the mouse button is released – even if the cursor
+    // is outside the image area.
+    $(document).on('mouseup', function () {
+      if (shadingModeActive) {
+        isDrawing = false;
+      }
+    });
+
+    image.on('dragstart', function(e) {
+      if (shadingModeActive) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    image.on('mousedown', function(e) {
+      if (shadingModeActive) {
+        e.preventDefault();
+      }
+      if (!shadingModeActive) return;
+      isDrawing = true;               // start drawing only while mouse is down
+    });
 
     image.on('mousemove', function(e) {
       if (!shadingModeActive || !isDrawing) return;
@@ -873,10 +881,9 @@
     });
 
     image.on('mouseleave', function() {
+      // When the cursor leaves the image, stop drawing.
       isDrawing = false;
     });
-
-
     // -----------------------------------------------------------------
     // Hover info
     // -----------------------------------------------------------------
