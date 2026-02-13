@@ -660,6 +660,10 @@
       showRegion(parc, name);
     });
 
+    let drawingPoints = [];
+    let canvasOverlay = null;
+    let drawingCanvas = null;
+    let drawingCtx = null;
 
     function toggleShadingMode() {
       shadingModeActive = !shadingModeActive;
