@@ -216,20 +216,10 @@
 
     #shading-svg-container svg {
       position: absolute;
-<<<<<<< HEAD
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-=======
-      width: 4px;
-      /* was 10px   → thinner */
-      height: 4px;
-      /* was 10px   → thinner */
-      background-color: rgba(0, 255, 0, 0.3);
-      border: 0.25px solid rgba(0, 255, 0, 0.6);
-      /* keep or reduce if desired */
->>>>>>> parent of d887f5d (Updated shading size to make smaller.)
       pointer-events: none;
       z-index: 110;
       background-color: transparent;
@@ -735,21 +725,9 @@
       shadedVerticesSet.add(vertex);
       updateShadingStatus();
 
-<<<<<<< HEAD
       // ---- 2️⃣  Build / extend the SVG line  ----
       // First time we draw during this mouse‑down session → create SVG
       if (!shadingSvg) startSvgLine();
-=======
-        const $overlay = $('<div class="shading-overlay"></div>');
-        const imgOffset = image.offset();
-        // inside recordShadedVertex()
-        $overlay.css({
-          left: imgOffset.left + screenX - 2,   // 2 = 4/2
-          top: imgOffset.top + screenY - 2
-        });
-        $('body').append($overlay);
-        shadedOverlays.push($overlay);
->>>>>>> parent of d887f5d (Updated shading size to make smaller.)
 
       // Convert original image coordinates back to screen space
       const screenX = Math.round(mouseXOrig / scaleX);
