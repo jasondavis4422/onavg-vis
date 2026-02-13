@@ -206,12 +206,14 @@
     }
 
     /* Shading overlay – semi-transparent green square */
+    
     .shading-overlay {
       position: absolute;
-      width: 2px;
-      height: 2px;
-      background-color: rgba(0, 255, 0, 0.3);
+      width: 1px;
+      height: 1px;
+      background-color: rgba(0, 255, 0, 1);
       border: 0.1px solid rgba(0, 255, 0, 0.6);
+      border-radius: 50%;
       pointer-events: none;
       z-index: 110;
     }
@@ -694,8 +696,8 @@
         const $overlay = $('<div class="shading-overlay"></div>');
         const imgOffset = image.offset();
         $overlay.css({
-          left: imgOffset.left + screenX - 1,
-          top: imgOffset.top + screenY - 1
+          left: imgOffset.left + screenX - 0.5,
+          top: imgOffset.top + screenY - 0.5
         });
         $('body').append($overlay);
         shadedOverlays.push($overlay);
