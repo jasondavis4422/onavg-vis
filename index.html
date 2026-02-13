@@ -182,6 +182,9 @@
       user-select: none;
       -webkit-user-drag: none;
       -webkit-touch-callout: none;
+      border: none;
+      outline: none;
+      box-shadow: none;
     }
 
     /* MARKER – green "X" */
@@ -206,7 +209,7 @@
     }
 
     /* Shading overlay – semi-transparent green square */
-    
+
     .shading-overlay {
       position: absolute;
       width: 1px;
@@ -658,9 +661,6 @@
     });
 
 
-    // -----------------------------------------------------------------
-    // NEW: SHADING FEATURE FUNCTIONS
-    // -----------------------------------------------------------------
     function toggleShadingMode() {
       shadingModeActive = !shadingModeActive;
       const $btn = $('#toggle-shading-btn');
@@ -668,6 +668,7 @@
       if (shadingModeActive) {
         $btn.addClass('active');
         image.addClass('shading-active');
+        clearDrawing();
         updateShadingStatus();
       } else {
         $btn.removeClass('active');
@@ -682,34 +683,157 @@
       $('#shading-status').text(`Shading ${status} | Vertices: ${count}`);
     }
 
-    function recordShadedVertex(mouseXOrig, mouseYOrig) {
-      const vertex = getVertexFromMapping(mouseXOrig, mouseYOrig);
-
-      if (vertex !== null && !shadedVerticesSet.has(vertex)) {
-        shadedVerticesSet.add(vertex);
-
-        // Draw overlay
-        const rect = image[0].getBoundingClientRect();
-        const screenX = Math.round(mouseXOrig / scaleX);
-        const screenY = Math.round(mouseYOrig / scaleY);
-
-        const $overlay = $('<div class="shading-overlay"></div>');
-        const imgOffset = image.offset();
-        $overlay.css({
-          left: imgOffset.left + screenX - 0.5,
-          top: imgOffset.top + screenY - 0.5
-        });
-        $('body').append($overlay);
-        shadedOverlays.push($overlay);
-
-        updateShadingStatus();
+    function createDrawingCanvas() {
+      if (canvasOverlay) {
+        canvasOverlay.remove();
       }
+
+      const imgOffset = image.offset();
+      const rect = image[0].getBoundingClientRect();
+
+      const $canvas = $('<canvas></canvas>');
+      drawingCanvas = $canvas[0];
+      drawingCanvas.width = rect.width;
+      drawingCanvas.height = rect.height;
+
+      drawingCtx = drawingCanvas.getContext('2d');
+
+      $canvas.css({
+        position: 'absolute',
+        left: imgOffset.left,
+        top: imgOffset.top,
+        border: 'none',
+        pointerEvents: 'none',
+        zIndex: 115
+      });
+
+      $('body').append($canvas);
+      canvasOverlay = $canvas;
+    }
+
+    function drawBrushStroke(x, y) {
+      if (!drawingCtx) return;
+
+      drawingCtx.strokeStyle = 'rgba(0, 255, 0, 0.6)';
+      drawingCtx.lineWidth = 5;
+      drawingCtx.lineCap = 'round';
+      drawingCtx.lineJoin = 'round';
+
+      if (drawingPoints.length === 0) {
+        drawingCtx.beginPath();
+        drawingCtx.moveTo(x, y);
+      } else {
+        drawingCtx.lineTo(x, y);
+        drawingCtx.stroke();
+      }
+
+      drawingPoints.push({ x, y });
+    }
+
+    function closeBlobShape() {
+      if (!drawingCtx || drawingPoints.length < 3) return;
+
+      // Draw line back to start to close the shape
+      const firstPoint = drawingPoints[0];
+      drawingCtx.lineTo(firstPoint.x, firstPoint.y);
+      drawingCtx.stroke();
+
+      // Fill the shape
+      drawingCtx.fillStyle = 'rgba(0, 255, 0, 0.15)';
+      drawingCtx.fill();
+    }
+
+    function clearDrawing() {
+      drawingPoints = [];
+      if (canvasOverlay) {
+        canvasOverlay.remove();
+        canvasOverlay = null;
+      }
+      drawingCanvas = null;
+      drawingCtx = null;
+    }
+
+    function pointInShape(point, shapePoints) {
+      // Ray casting algorithm for point-in-polygon test
+      const x = point.x;
+      const y = point.y;
+      let inside = false;
+
+      for (let i = 0, j = shapePoints.length - 1; i < shapePoints.length; j = i++) {
+        const xi = shapePoints[i].x;
+        const yi = shapePoints[i].y;
+        const xj = shapePoints[j].x;
+        const yj = shapePoints[j].y;
+
+        const intersect = ((yi > y) !== (yj > y)) &&
+          (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
+    }
+
+
+    function findVerticesInBlob(shapeScreenCoords) {
+      if (shapeScreenCoords.length < 3) return new Set();
+
+      // Convert screen coordinates to original image coordinates
+      const shapeOrigCoords = shapeScreenCoords.map(p => ({
+        x: Math.round(p.x * scaleX),
+        y: Math.round(p.y * scaleY)
+      }));
+
+      // Get bounding box
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+
+      shapeOrigCoords.forEach(p => {
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y);
+      });
+
+      minX = Math.max(0, minX);
+      maxX = Math.min(originalWidth - 1, maxX);
+      minY = Math.max(0, minY);
+      maxY = Math.min(originalHeight - 1, maxY);
+
+      const vertices = new Set();
+
+      // Check each point within bounding box
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          if (pointInShape({ x, y }, shapeOrigCoords)) {
+            const vertex = getVertexFromMapping(x, y);
+            if (vertex !== null) {
+              vertices.add(vertex);
+            }
+          }
+        }
+      }
+
+      return vertices;
+    }
+
+    function recordVerticesInBlob(shapeScreenCoords) {
+      const verticesInBlob = findVerticesInBlob(shapeScreenCoords);
+
+      verticesInBlob.forEach(vertex => {
+        if (!shadedVerticesSet.has(vertex)) {
+          shadedVerticesSet.add(vertex);
+        }
+      });
+
+
+      updateShadingStatus();
     }
 
     function clearShading() {
       shadedVerticesSet.clear();
       shadedOverlays.forEach($overlay => $overlay.remove());
       shadedOverlays = [];
+      clearDrawing();
       updateShadingStatus();
     }
 
@@ -857,10 +981,15 @@
         }
       }
     }
+    // -----------------------------------------------------------------
+    // SHADING EVENT HANDLERS (FREEFORM BLOB)
+    // -----------------------------------------------------------------
+
 
     $('#toggle-shading-btn').on('click', function () {
       toggleShadingMode();
     });
+
 
     $('#finish-shading-btn').on('click', function () {
       if (shadedVerticesSet.size === 0) {
@@ -870,17 +999,11 @@
       finishShadingAndExport();
     });
 
+
     $('#clear-shading-btn').on('click', function () {
       clearShading();
     });
 
-    // Stop drawing when the mouse button is released – even if the cursor
-    // is outside the image area.
-    $(document).on('mouseup', function () {
-      if (shadingModeActive) {
-        isDrawing = false;
-      }
-    });
 
     image.on('dragstart', function (e) {
       if (shadingModeActive) {
@@ -889,30 +1012,52 @@
       }
     });
 
+
     image.on('mousedown', function (e) {
       if (shadingModeActive) {
         e.preventDefault();
       }
       if (!shadingModeActive) return;
-      isDrawing = true;               // start drawing only while mouse is down
+
+
+      const rect = this.getBoundingClientRect();
+      const xScreen = e.clientX - rect.left;
+      const yScreen = e.clientY - rect.top;
+
+
+      createDrawingCanvas();
+      drawBrushStroke(xScreen, yScreen);
+      isDrawing = true;
     });
+
 
     image.on('mousemove', function (e) {
       if (!shadingModeActive || !isDrawing) return;
 
-      const rect = this.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
 
-      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-        const mouseXOrig = Math.floor(x * scaleX);
-        const mouseYOrig = Math.floor(y * scaleY);
-        recordShadedVertex(mouseXOrig, mouseYOrig);
+      const rect = this.getBoundingClientRect();
+      const xScreen = e.clientX - rect.left;
+      const yScreen = e.clientY - rect.top;
+
+
+      if (xScreen >= 0 && xScreen <= rect.width && yScreen >= 0 && yScreen <= rect.height) {
+        drawBrushStroke(xScreen, yScreen);
       }
     });
 
+
+    $(document).on('mouseup', function () {
+      if (shadingModeActive && isDrawing && drawingPoints.length >= 3) {
+        isDrawing = false;
+        closeBlobShape();
+        recordVerticesInBlob(drawingPoints);
+      } else if (shadingModeActive && isDrawing) {
+        isDrawing = false;
+      }
+    });
+
+
     image.on('mouseleave', function () {
-      // When the cursor leaves the image, stop drawing.
       isDrawing = false;
     });
 
