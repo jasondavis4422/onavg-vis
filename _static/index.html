@@ -52,7 +52,7 @@
       bottom: 150px;
       /* distance from the bottom of the viewport */
       right: 10px;
-      /* ← change: anchor to the right edge */
+      /* anchor to the right edge */
       font-size: 12px;
       background-color: rgba(0, 0, 0, 0.8);
       padding: 10px;
@@ -205,24 +205,15 @@
       top: -7px;
     }
 
-    .shading-line {
-      fill: none;
-      stroke: #00ff00;
-      stroke-width: 3;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      opacity: 1;
-    }
-
-    #shading-svg-container svg {
+    /* Shading overlay – semi-transparent green square */
+    .shading-overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      width: 2px;
+      height: 2px;
+      background-color: rgba(0, 255, 0, 0.3);
+      border: 0.1px solid rgba(0, 255, 0, 0.6);
       pointer-events: none;
       z-index: 110;
-      background-color: transparent;
     }
 
     #clear-shading-btn {
@@ -250,10 +241,6 @@
     <button id="finish-shading-btn">Finish & Export</button>
     <button id="clear-shading-btn">Clear Shading</button>
   </div>
-
-  <!-- put this right after the <body> tag (or anywhere inside the page) -->
-  <div id="shading-svg-container"
-    style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:110;"></div>
 
   <!-- Search panel -->
   <div id="search-panel">
@@ -366,16 +353,13 @@
       originalWidth = 0,
       originalHeight = 0,
       scaleX = 1,
-      scaleY = 1;          // array of "x,y" strings
+      scaleY = 1;
 
     // Shading mode variables
     let shadingModeActive = false;
     let isDrawing = false;
     let shadedVerticesSet = new Set();
     let shadedOverlays = [];
-    let shadingSvg = null;          // the <svg> element
-    let shadingPoly = null;         // the <polyline> that we update
-    let currentPath = [];
 
     const image = $('#brain-image');
     const vertexInfo = $('#vertex-info');
@@ -503,26 +487,6 @@
       $('body').append($m);
     }
 
-    function startSvgLine() {
-      // create <svg> (full‑screen overlay)
-      shadingSvg = $('<svg></svg>').attr({
-        width: window.innerWidth,
-        height: window.innerHeight,
-        style: 'position: absolute; top: 0; left: 0; display: block;'
-      }).css({
-        'position': 'absolute',
-        'top': '0',
-        'left': '0',
-        'width': '100%',
-        'height': '100%',
-        'display': 'block'
-      }).appendTo('#shading-svg-container');
-
-      // create the <polyline> that will hold the points
-      shadingPoly = $('<polyline></polyline>').addClass('shading-line')
-        .attr('points', '');
-      shadingSvg.append(shadingPoly);
-    }
     // -----------------------------------------------------------------
     // UI – file uploads
     // -----------------------------------------------------------------
@@ -693,7 +657,7 @@
 
 
     // -----------------------------------------------------------------
-    // SHADING FEATURE FUNCTIONS
+    // NEW: SHADING FEATURE FUNCTIONS
     // -----------------------------------------------------------------
     function toggleShadingMode() {
       shadingModeActive = !shadingModeActive;
@@ -719,35 +683,31 @@
     function recordShadedVertex(mouseXOrig, mouseYOrig) {
       const vertex = getVertexFromMapping(mouseXOrig, mouseYOrig);
 
-      if (vertex === null || shadedVerticesSet.has(vertex)) return; // nothing new
+      if (vertex !== null && !shadedVerticesSet.has(vertex)) {
+        shadedVerticesSet.add(vertex);
 
-      // ---- 1️⃣  Store the vertex for the report  ----
-      shadedVerticesSet.add(vertex);
-      updateShadingStatus();
+        // Draw overlay
+        const rect = image[0].getBoundingClientRect();
+        const screenX = Math.round(mouseXOrig / scaleX);
+        const screenY = Math.round(mouseYOrig / scaleY);
 
-      // ---- 2️⃣  Build / extend the SVG line  ----
-      // First time we draw during this mouse‑down session → create SVG
-      if (!shadingSvg) startSvgLine();
+        const $overlay = $('<div class="shading-overlay"></div>');
+        const imgOffset = image.offset();
+        $overlay.css({
+          left: imgOffset.left + screenX - 1,
+          top: imgOffset.top + screenY - 1
+        });
+        $('body').append($overlay);
+        shadedOverlays.push($overlay);
 
-      // Convert original image coordinates back to screen space
-      const screenX = Math.round(mouseXOrig / scaleX);
-      const screenY = Math.round(mouseYOrig / scaleY);
-      currentPath.push(`${screenX},${screenY}`);
-
-      // Update the <polyline> points attribute
-      shadingPoly.attr('points', currentPath.join(' '));
+        updateShadingStatus();
+      }
     }
+
     function clearShading() {
       shadedVerticesSet.clear();
       shadedOverlays.forEach($overlay => $overlay.remove());
       shadedOverlays = [];
-
-      if (shadingSvg) {
-        shadingSvg.remove();
-        shadingSvg = null;
-        shadingPoly = null;
-        currentPath = [];
-      }
       updateShadingStatus();
     }
 
@@ -896,10 +856,6 @@
       }
     }
 
-
-    // -----------------------------------------------------------------
-    // SHADING MODE EVENT HANDLERS (updated)
-    // -----------------------------------------------------------------
     $('#toggle-shading-btn').on('click', function () {
       toggleShadingMode();
     });
@@ -954,9 +910,10 @@
     });
 
     image.on('mouseleave', function () {
-      isDrawing = false;          // stop adding points
-      // Stop the line when the mouse leaves the image
+      // When the cursor leaves the image, stop drawing.
+      isDrawing = false;
     });
+
     // -----------------------------------------------------------------
     // Hover info
     // -----------------------------------------------------------------
