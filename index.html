@@ -205,16 +205,13 @@
       top: -7px;
     }
 
-    /* replace the old .shading‑overlay rule – we keep it for backward compatibility */
     .shading-line {
-      fill: none;
-      stroke: rgba(0, 255, 0, 0.6);
-      /* same colour as the old border */
-      stroke-width: 2;
-      /* thinner than the 10 px box */
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
+  fill: none;
+  stroke: rgba(0,255,0,0.9);   /* slightly brighter */
+  stroke-width: 4;            /* thicker line */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
     #clear-shading-btn {
       padding: 8px 12px;
@@ -941,12 +938,6 @@
     image.on('mouseleave', function () {
       isDrawing = false;          // stop adding points
       // Stop the line when the mouse leaves the image
-      if (shadingSvg) {
-        shadingSvg.remove();
-        shadingSvg = null;
-        shadingPoly = null;
-        currentPath = [];
-      }
     });
     // -----------------------------------------------------------------
     // Hover info
