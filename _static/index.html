@@ -207,8 +207,8 @@
 
     .shading-line {
       fill: none;
-      stroke: rgba(0, 255, 0, 0.9);
-      stroke-width: 4;
+      stroke: #00ff00;
+      stroke-width: 3;
       stroke-linecap: round;
       stroke-linejoin: round;
       opacity: 1;
@@ -506,9 +506,16 @@
     function startSvgLine() {
       // create <svg> (full‑screen overlay)
       shadingSvg = $('<svg></svg>').attr({
-        width: '100%',
-        height: '100%',
-        viewBox: `0 0 ${window.innerWidth} ${window.innerHeight}`
+        width: window.innerWidth,
+        height: window.innerHeight,
+        style: 'position: absolute; top: 0; left: 0; display: block;'
+      }).css({
+        'position': 'absolute',
+        'top': '0',
+        'left': '0',
+        'width': '100%',
+        'height': '100%',
+        'display': 'block'
       }).appendTo('#shading-svg-container');
 
       // create the <polyline> that will hold the points
@@ -516,7 +523,6 @@
         .attr('points', '');
       shadingSvg.append(shadingPoly);
     }
-
     // -----------------------------------------------------------------
     // UI – file uploads
     // -----------------------------------------------------------------
