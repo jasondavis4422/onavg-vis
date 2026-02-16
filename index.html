@@ -243,6 +243,7 @@
   <div id="shading-panel">
     <button id="toggle-shading-btn">🖍️ Shade Region</button>
     <span id="shading-status">Shading OFF | Vertices: 0</span>
+    <button id="undo-shading-btn">↩️ Undo Last</button> <button id="finish-shading-btn">Finish & Export</button>
     <button id="finish-shading-btn">Finish & Export</button>
     <button id="clear-shading-btn">Clear Shading</button>
   </div>
@@ -366,6 +367,7 @@
     let shadedVerticesSet = new Set();
     let shadedOverlays = [];
     let finishedCanvases = [];
+    let circleHistory = []; // Array of Sets: each Set contains vertices for one circle
 
     const image = $('#brain-image');
     const vertexInfo = $('#vertex-info');
@@ -821,12 +823,35 @@
     function recordVerticesInBlob(shapeScreenCoords) {
       const verticesInBlob = findVerticesInBlob(shapeScreenCoords);
 
+      // Store this specific group of vertices for the "Undo" feature
+      circleHistory.push(new Set(verticesInBlob));
+
+      // Merge into the master set
       verticesInBlob.forEach(vertex => {
-        if (!shadedVerticesSet.has(vertex)) {
-          shadedVerticesSet.add(vertex);
-        }
+        shadedVerticesSet.add(vertex);
       });
 
+      updateShadingStatus();
+    }
+
+    function undoLastCircle() {
+      if (circleHistory.length === 0) return;
+
+      // 1. Remove the last visual canvas
+      const lastCanvas = finishedCanvases.pop();
+      if (lastCanvas) lastCanvas.remove();
+
+      // 2. Remove the last data entry
+      circleHistory.pop();
+
+      // 3. Rebuild the master shadedVerticesSet from scratch 
+      // (This ensures vertices shared by overlapping circles aren't accidentally deleted)
+      shadedVerticesSet.clear();
+      circleHistory.forEach(set => {
+        set.forEach(vertex => {
+          shadedVerticesSet.add(vertex);
+        });
+      });
 
       updateShadingStatus();
     }
@@ -1012,6 +1037,10 @@
       clearShading();
     });
 
+    $('#undo-shading-btn').on('click', function () {
+      undoLastCircle();
+    });
+
 
     image.on('dragstart', function (e) {
       if (shadingModeActive) {
@@ -1036,7 +1065,6 @@
       drawBrushStroke(xScreen, yScreen);
     });
 
-
     image.on('mousemove', function (e) {
       if (!shadingModeActive || !isDrawing) return;
 
@@ -1052,20 +1080,14 @@
     $(document).on('mouseup', function () {
       if (shadingModeActive && isDrawing) {
         isDrawing = false;
-
         if (drawingPoints.length >= 3) {
           closeBlobShape();
-          // Record the vertices from THIS specific shape into the global Set
           recordVerticesInBlob(drawingPoints);
-
-          // Keep this canvas so the green circle stays visible
           finishedCanvases.push(canvasOverlay);
-        } else {
-          // If it was just a click (not a shape), remove the tiny canvas
-          if (canvasOverlay) canvasOverlay.remove();
+        } else if (canvasOverlay) {
+          canvasOverlay.remove();
         }
-
-        // Reset temporary variables for the next circle
+        drawingPoints = []; // CRITICAL: Reset the points for the next shape
         drawingCanvas = null;
         drawingCtx = null;
         canvasOverlay = null;
