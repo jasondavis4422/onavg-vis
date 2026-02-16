@@ -688,9 +688,6 @@
     }
 
     function createDrawingCanvas() {
-      if (canvasOverlay) {
-        canvasOverlay.remove();
-      }
 
       const imgOffset = image.offset();
       const rect = image[0].getBoundingClientRect();
@@ -835,8 +832,14 @@
 
     function clearShading() {
       shadedVerticesSet.clear();
-      shadedOverlays.forEach($overlay => $overlay.remove());
-      shadedOverlays = [];
+
+      // Remove all persistent canvases from the screen
+      finishedCanvases.forEach($c => $c.remove());
+      finishedCanvases = [];
+
+      // Clean up current drawing if any
+      if (canvasOverlay) canvasOverlay.remove();
+
       clearDrawing();
       updateShadingStatus();
     }
@@ -1018,48 +1021,55 @@
 
 
     image.on('mousedown', function (e) {
-      if (shadingModeActive) {
-        e.preventDefault();
-      }
       if (!shadingModeActive) return;
+      e.preventDefault();
 
+      isDrawing = true;
+      drawingPoints = []; // Reset points for this specific new circle
 
       const rect = this.getBoundingClientRect();
       const xScreen = e.clientX - rect.left;
       const yScreen = e.clientY - rect.top;
 
-
       createDrawingCanvas();
       drawBrushStroke(xScreen, yScreen);
-      isDrawing = true;
     });
 
 
     image.on('mousemove', function (e) {
       if (!shadingModeActive || !isDrawing) return;
 
-
       const rect = this.getBoundingClientRect();
       const xScreen = e.clientX - rect.left;
       const yScreen = e.clientY - rect.top;
-
 
       if (xScreen >= 0 && xScreen <= rect.width && yScreen >= 0 && yScreen <= rect.height) {
         drawBrushStroke(xScreen, yScreen);
       }
     });
 
-
     $(document).on('mouseup', function () {
-      if (shadingModeActive && isDrawing && drawingPoints.length >= 3) {
+      if (shadingModeActive && isDrawing) {
         isDrawing = false;
-        closeBlobShape();
-        recordVerticesInBlob(drawingPoints);
-      } else if (shadingModeActive && isDrawing) {
-        isDrawing = false;
+
+        if (drawingPoints.length >= 3) {
+          closeBlobShape();
+          // Record the vertices from THIS specific shape into the global Set
+          recordVerticesInBlob(drawingPoints);
+
+          // Keep this canvas so the green circle stays visible
+          finishedCanvases.push(canvasOverlay);
+        } else {
+          // If it was just a click (not a shape), remove the tiny canvas
+          if (canvasOverlay) canvasOverlay.remove();
+        }
+
+        // Reset temporary variables for the next circle
+        drawingCanvas = null;
+        drawingCtx = null;
+        canvasOverlay = null;
       }
     });
-
 
     image.on('mouseleave', function () {
       isDrawing = false;
